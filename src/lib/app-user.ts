@@ -85,15 +85,17 @@ export async function getStaffSummary(user: AppUser): Promise<StaffSummary> {
              WHERE mine.class_id = c.id AND mine.user_id = $1
                AND mine.role = 'teacher' AND mine.status = 'active'
           ))) AS students,
-      (SELECT count(*)::int
-         FROM class_memberships cm
-         JOIN classes c ON c.id = cm.class_id
-        WHERE cm.role = 'student' AND cm.status = 'pending' AND c.archived_at IS NULL
-          AND ($2::boolean OR EXISTS (
-            SELECT 1 FROM class_memberships mine
-             WHERE mine.class_id = c.id AND mine.user_id = $1
-               AND mine.role = 'teacher' AND mine.status = 'active'
-          ))) AS needs_attention`, [user.id, admin]);
+      ((SELECT count(*)::int
+          FROM class_memberships cm
+          JOIN classes c ON c.id = cm.class_id
+         WHERE cm.role = 'student' AND cm.status = 'pending' AND c.archived_at IS NULL
+           AND ($2::boolean OR EXISTS (
+             SELECT 1 FROM class_memberships mine
+              WHERE mine.class_id = c.id AND mine.user_id = $1
+                AND mine.role = 'teacher' AND mine.status = 'active'
+           )))
+       + (SELECT CASE WHEN $2::boolean THEN count(*)::int ELSE 0 END
+            FROM users u WHERE u.approval_status = 'pending')) AS needs_attention`, [user.id, admin]);
 
   const row = result.rows[0];
   return {
