@@ -3,6 +3,7 @@ import SignOutButton from "@/components/sign-out-button";
 import JoinClassForm from "@/components/join-class-form";
 import LocalTime from "@/components/local-time";
 import ClassPreviewSelector from "@/components/class-preview-selector";
+import ThemeToggle from "@/components/theme-toggle";
 import { getStudentAssignments, requireAppUser } from "@/lib/app-user";
 import { getClassPreviewAssignments, listClasses } from "@/lib/classes";
 
@@ -21,7 +22,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   return <div className="student-shell">
     <header className="student-header">
       <div className="student-brand"><div className="mark"><span>Q</span></div><span><strong>AOMA</strong><small>Student workspace</small></span></div>
-      <div className="student-account">{isPreview ? <Link className="secondary-button student-exit" href="/dashboard">← Exit student view</Link> : <Link className="secondary-button student-exit" href="/account">Account</Link>}<span>{user.displayName}</span><SignOutButton /></div>
+      <div className="student-account"><ThemeToggle />{isPreview ? <Link className="secondary-button student-exit" href="/dashboard">← Exit student view</Link> : <Link className="secondary-button student-exit" href="/account">Account</Link>}<span>{user.displayName}</span><SignOutButton /></div>
     </header>
     {isPreview && <div className="preview-banner"><strong>Student view preview</strong><ClassPreviewSelector classes={classes} selectedId={selectedClass?.id ?? ""} /><span>{selectedClass ? `Viewing ${selectedClass.name} as a new student.` : "Select a class to begin."}</span><Link href="/dashboard">Exit preview</Link></div>}
     <main className="student-main">

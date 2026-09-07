@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type ReactNode } from "react";
 import SignOutButton from "@/components/sign-out-button";
+import ThemeToggle from "@/components/theme-toggle";
 import type { StaffSummary } from "@/lib/app-user";
 
 export type View = "overview" | "library" | "classes" | "assignments" | "audit" | "account";
@@ -64,11 +65,12 @@ export default function Workspace({ view, user, summary, children }: { view: Vie
         <Link className={view === "audit" ? "active" : ""} href="/audit-logs"><span className="nav-icon">⌁</span>Audit logs</Link>
         <Link className={view === "account" ? "active" : ""} href="/account"><span className="nav-icon">◎</span>Account</Link>
         <Link href="/settings"><span className="nav-icon">⚙</span>Settings</Link>
+        <ThemeToggle label />
         <div className="profile"><span>{initials}</span><div><strong>{user.displayName}</strong><small>{user.role}</small></div><SignOutButton /></div>
       </div>
     </aside>
     <main className="main-content">
-      <div className="mobile-bar"><div className="brand"><Mark /><strong>AOMA Question Bank</strong></div><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav></div>
+      <div className="mobile-bar"><div className="brand"><Mark /><strong>AOMA Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
       {children ?? <>{view === "overview" && <Overview name={user.displayName} summary={summary ?? { questions: 0, assignments: 0, students: 0, needsAttention: 0 }} />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}
     </main>
   </div>;
