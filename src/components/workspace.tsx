@@ -32,7 +32,7 @@ function Overview({ name, summary }: { name: string; summary: StaffSummary }) {
       <article className="metric-card accent-blue"><div className="metric-top"><span className="metric-icon">▤</span></div><strong>{summary.questions}</strong><span>Questions</span></article>
       <article className="metric-card accent-violet"><div className="metric-top"><span className="metric-icon">✓</span></div><strong>{summary.assignments}</strong><span>Assignments</span></article>
       <article className="metric-card accent-mint"><div className="metric-top"><span className="metric-icon">◉</span></div><strong>{summary.students}</strong><span>Students</span></article>
-      <article className="metric-card accent-amber"><div className="metric-top"><span className="metric-icon">!</span></div><strong>{summary.needsAttention}</strong><span>Items needing attention</span></article>
+      <Link className="metric-card metric-link accent-amber" href="/attention"><div className="metric-top"><span className="metric-icon">!</span><span className="metric-open">Review →</span></div><strong>{summary.needsAttention}</strong><span>Items needing attention</span></Link>
     </section>
     {isEmpty && <section className="panel"><div className="empty-state product-empty"><span>＋</span><h2>Set up your AOMA workspace</h2><p>Create the first class or add your first image-based question set.</p><div className="empty-actions"><Link className="primary-button" href="/classes">Create a class</Link><Link className="secondary-button" href="/question-bank/upload">Upload a set</Link></div></div></section>}
   </>;

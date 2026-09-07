@@ -147,6 +147,44 @@ export async function getStaffSummary(user: AppUser): Promise<StaffSummary> {
   };
 }
 
+export type EnrollmentAttentionItem = {
+  id: string;
+  class_id: string;
+  class_name: string;
+  display_name: string;
+  username: string | null;
+  requested_at: Date;
+};
+
+export type AccountAttentionItem = {
+  id: string;
+  display_name: string;
+  username: string | null;
+  created_at: Date;
+};
+
+export async function getAttentionQueue(user: AppUser) {
+  const database = getDatabase();
+  const admin = user.role === "admin";
+  const enrollments = await database.query<EnrollmentAttentionItem>(`SELECT cm.id, cm.class_id, c.name AS class_name,
+      student.display_name, student.username, cm.requested_at
+    FROM class_memberships cm
+    JOIN classes c ON c.id = cm.class_id
+    JOIN users student ON student.id = cm.user_id
+    WHERE cm.role = 'student' AND cm.status = 'pending' AND c.archived_at IS NULL
+      AND ($2::boolean OR EXISTS (
+        SELECT 1 FROM class_memberships mine
+        WHERE mine.class_id = c.id AND mine.user_id = $1
+          AND mine.role = 'teacher' AND mine.status = 'active'
+      ))
+    ORDER BY cm.requested_at`, [user.id, admin]);
+  const accounts = admin
+    ? await database.query<AccountAttentionItem>(`SELECT id, display_name, username, created_at
+        FROM users WHERE approval_status = 'pending' ORDER BY created_at`)
+    : { rows: [] as AccountAttentionItem[] };
+  return { enrollments: enrollments.rows, accounts: accounts.rows };
+}
+
 export async function requireAppUser(options?: { staff?: boolean; active?: boolean }) {
   const user = await getAppUser();
   if (!user) redirect("/login");
