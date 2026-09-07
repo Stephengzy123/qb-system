@@ -45,3 +45,22 @@ export async function getClassDetail(user: AppUser, classId: string) {
     ORDER BY CASE cm.status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 ELSE 2 END, cm.requested_at`, [classId]);
   return { ...classResult.rows[0], members: members.rows };
 }
+
+export async function getClassPreviewAssignments(user: AppUser, classId: string) {
+  const database = getDatabase();
+  const allowed = user.role === "admin" || Boolean((await database.query("SELECT 1 FROM class_memberships WHERE class_id = $1 AND user_id = $2 AND role = 'teacher' AND status = 'active'", [classId, user.id])).rowCount);
+  if (!allowed) return [];
+  const result = await database.query<{
+    id: string; title: string; class_name: string; due_at: Date | null;
+    student_status: null; submitted_at: null;
+  }>(`SELECT a.id, a.title, c.name AS class_name, a.due_at,
+            NULL::text AS student_status, NULL::timestamptz AS submitted_at
+       FROM assignments a
+       JOIN classes c ON c.id = a.class_id
+      WHERE a.class_id = $1
+        AND a.status = 'open'
+        AND c.archived_at IS NULL
+        AND (a.open_at IS NULL OR a.open_at <= now())
+      ORDER BY a.due_at NULLS LAST, a.created_at DESC`, [classId]);
+  return result.rows;
+}

@@ -2,27 +2,35 @@ import Link from "next/link";
 import SignOutButton from "@/components/sign-out-button";
 import JoinClassForm from "@/components/join-class-form";
 import LocalTime from "@/components/local-time";
+import ClassPreviewSelector from "@/components/class-preview-selector";
 import { getStudentAssignments, requireAppUser } from "@/lib/app-user";
+import { getClassPreviewAssignments, listClasses } from "@/lib/classes";
 
 export const dynamic = "force-dynamic";
 
-export default async function StudentPage() {
+export default async function StudentPage({ searchParams }: { searchParams: Promise<{ classId?: string }> }) {
   const user = await requireAppUser();
-  const assignments = await getStudentAssignments(user.id);
   const isPreview = user.role !== "student";
+  const classes = isPreview ? await listClasses(user) : [];
+  const requestedClassId = isPreview ? (await searchParams).classId ?? "" : "";
+  const selectedClass = classes.find((item) => item.id === requestedClassId);
+  const assignments = isPreview
+    ? selectedClass ? await getClassPreviewAssignments(user, selectedClass.id) : []
+    : await getStudentAssignments(user.id);
 
   return <div className="student-shell">
     <header className="student-header">
       <div className="student-brand"><div className="mark"><span>Q</span></div><span><strong>AOMA</strong><small>Student workspace</small></span></div>
       <div className="student-account">{isPreview ? <Link className="secondary-button student-exit" href="/dashboard">← Exit student view</Link> : <Link className="secondary-button student-exit" href="/account">Account</Link>}<span>{user.displayName}</span><SignOutButton /></div>
     </header>
-    {isPreview && <div className="preview-banner"><strong>Student view preview</strong><span>You are viewing the workspace as a student would. Staff controls are hidden.</span><Link href="/dashboard">Exit preview</Link></div>}
+    {isPreview && <div className="preview-banner"><strong>Student view preview</strong><span>{selectedClass ? `Viewing ${selectedClass.name} as an unstarted student.` : "Select a class to preview its student workspace."}</span><Link href="/dashboard">Exit preview</Link></div>}
     <main className="student-main">
-      <div className="student-welcome"><p className="eyebrow">{isPreview ? "STUDENT VIEW" : "MY WORK"}</p><h1>{isPreview ? "Student workspace preview" : `Welcome, ${user.displayName.split(" ")[0]}.`}</h1><p className="lede">{isPreview ? "This is the empty state students see before they receive assigned work." : "Your current assignments and practice materials appear here."}</p></div>
+      <div className="student-welcome"><p className="eyebrow">{isPreview ? "STUDENT VIEW" : "MY WORK"}</p><h1>{isPreview ? selectedClass?.name ?? "Student workspace preview" : `Welcome, ${user.displayName.split(" ")[0]}.`}</h1><p className="lede">{isPreview ? selectedClass ? "This is what a newly enrolled student in this class can currently see." : "Choose a class to preview its open assignments and student-facing empty states." : "Your current assignments and practice materials appear here."}</p></div>
+      {isPreview && <ClassPreviewSelector classes={classes} selectedId={selectedClass?.id ?? ""} />}
       {!isPreview && <JoinClassForm />}
       {assignments.length === 0
-        ? <section className="panel student-empty"><div className="empty-illustration">✓</div><h2>No open assignments</h2><p>New work will appear here after class enrollment is approved and a teacher publishes an assignment.</p></section>
-        : <section className="student-assignment-grid">{assignments.map((assignment) => <a className="panel student-assignment-card" href={`/student/assignments/${assignment.id}`} key={assignment.id}><span className="student-card-icon">↗</span><div><p>{assignment.class_name}</p><h2>{assignment.title}</h2><small>{assignment.due_at ? <LocalTime value={assignment.due_at.toISOString()} prefix="Due " /> : "No due date"}</small></div><b>{assignment.student_status === "submitted" ? "Submitted" : assignment.student_status ? "Continue" : "Start"} →</b></a>)}</section>}
+        ? <section className="panel student-empty"><div className="empty-illustration">✓</div><h2>{isPreview && !selectedClass ? "Select a class to begin" : "No open assignments"}</h2><p>{isPreview && !selectedClass ? "The preview will update to show what a student in that class can access." : "New work will appear here after class enrollment is approved and a teacher publishes an assignment."}</p></section>
+        : <section className="student-assignment-grid">{assignments.map((assignment) => { const contents = <><span className="student-card-icon">↗</span><div><p>{assignment.class_name}</p><h2>{assignment.title}</h2><small>{assignment.due_at ? <LocalTime value={assignment.due_at.toISOString()} prefix="Due " /> : "No due date"}</small></div><b>{assignment.student_status === "submitted" ? "Submitted" : assignment.student_status ? "Continue" : "Start"} →</b></>; return isPreview ? <article className="panel student-assignment-card" key={assignment.id}>{contents}</article> : <a className="panel student-assignment-card" href={`/student/assignments/${assignment.id}`} key={assignment.id}>{contents}</a>; })}</section>}
     </main>
   </div>;
 }
