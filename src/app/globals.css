@@ -47,3 +47,4 @@ a.attention-item{text-decoration:none}
 @media(max-width:720px){.upload-panel{grid-template-columns:1fr}.upload-dropzone{min-height:330px;border-right:0;border-bottom:1px solid var(--line)}.preview-banner{align-items:flex-start;flex-direction:column;gap:4px}.student-account>span{display:none}.empty-actions{align-items:stretch;flex-direction:column;width:min(240px,100%)}.empty-actions a{width:100%}}
 @media(max-width:720px){.account-grid{grid-template-columns:1fr}.account-enrollment{grid-column:1}.student-account{gap:7px}}
 @media(max-width:720px){.review-row{grid-template-columns:40px 1fr}.review-row>div:last-child{grid-column:2;flex-wrap:wrap}}
+.member-row button.remove-member{border-color:#efc9cc;color:#a33b44}.member-row button.remove-member:hover{background:#fff4f4}
