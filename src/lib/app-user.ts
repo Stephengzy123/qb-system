@@ -33,7 +33,8 @@ export async function getAppUser(): Promise<AppUser | null> {
     id: string; auth_subject: string; email: string; display_name: string;
     default_role: AppUser["role"]; approval_status: AppUser["status"];
   }>(`INSERT INTO users (auth_subject, email, display_name, default_role, approval_status, approved_at)
-     VALUES ($1, $2, $3, $4, $5, CASE WHEN $5 = 'active' THEN now() ELSE NULL END)
+     VALUES ($1, $2, $3, $4::user_role, $5::account_status,
+       CASE WHEN $5::account_status = 'active'::account_status THEN now() ELSE NULL END)
      ON CONFLICT (auth_subject) DO UPDATE SET
        email = EXCLUDED.email,
        display_name = EXCLUDED.display_name,
