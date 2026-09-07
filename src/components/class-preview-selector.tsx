@@ -15,5 +15,5 @@ export default function ClassPreviewSelector({ classes, selectedId }: { classes:
     });
   }
 
-  return <section className="panel class-preview-picker"><label htmlFor="preview-class"><span>Preview class</span><select id="preview-class" value={selectedId} disabled={loading || classes.length === 0} onChange={(event) => selectClass(event.target.value)}><option value="">Select a class</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><p>{loading ? "Loading class preview…" : classes.length === 0 ? "Create a class before previewing its student workspace." : "Only classes you are allowed to manage are available."}</p></section>;
+  return <label className="preview-class-control" htmlFor="preview-class"><span>Preview class</span><select id="preview-class" value={selectedId} disabled={loading || classes.length === 0} onChange={(event) => selectClass(event.target.value)}><option value="">{classes.length === 0 ? "No classes available" : "Select a class"}</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{loading && <small>Loading…</small>}</label>;
 }
