@@ -6,6 +6,7 @@ import ClassPreviewSelector from "@/components/class-preview-selector";
 import ThemeToggle from "@/components/theme-toggle";
 import { getStudentAssignments, requireAppUser } from "@/lib/app-user";
 import { getClassPreviewAssignments, listClasses } from "@/lib/classes";
+import { getOrganizationName } from "@/lib/organization";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +19,14 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   const assignments = isPreview
     ? selectedClass ? await getClassPreviewAssignments(user, selectedClass.id) : []
     : await getStudentAssignments(user.id);
+  const organizationName = await getOrganizationName();
 
   return <div className="student-shell">
     <header className="student-header">
-      <div className="student-brand"><div className="mark"><span>Q</span></div><span><strong>AOMA</strong><small>Student workspace</small></span></div>
-      <div className="student-account"><ThemeToggle />{isPreview ? <Link className="secondary-button student-exit" href="/dashboard">← Exit student view</Link> : <Link className="secondary-button student-exit" href="/account">Account</Link>}<span>{user.displayName}</span><SignOutButton /></div>
+      <div className="student-brand"><div className="mark"><span>Q</span></div><span><strong>{organizationName}</strong><small>Student workspace</small></span></div>
+      <div className="student-account"><ThemeToggle />{isPreview ? <Link className="secondary-button student-exit" href="/admin/dashboard">← Exit student view</Link> : <Link className="secondary-button student-exit" href="/student/account">Account</Link>}<span>{user.displayName}</span><SignOutButton /></div>
     </header>
-    {isPreview && <div className="preview-banner"><strong>Student view preview</strong><ClassPreviewSelector classes={classes} selectedId={selectedClass?.id ?? ""} /><span>{selectedClass ? `Viewing ${selectedClass.name} as a new student.` : "Select a class to begin."}</span><Link href="/dashboard">Exit preview</Link></div>}
+    {isPreview && <div className="preview-banner"><strong>Student view preview</strong><ClassPreviewSelector classes={classes} selectedId={selectedClass?.id ?? ""} /><span>{selectedClass ? `Viewing ${selectedClass.name} as a new student.` : "Select a class to begin."}</span><Link href="/admin/dashboard">Exit preview</Link></div>}
     <main className="student-main">
       <div className="student-welcome"><p className="eyebrow">MY WORK</p><h1>{isPreview ? "Welcome, Student." : `Welcome, ${user.displayName.split(" ")[0]}.`}</h1><p className="lede">Your current assignments and practice materials appear here.</p></div>
       {(!isPreview || selectedClass) && <JoinClassForm preview={isPreview} />}

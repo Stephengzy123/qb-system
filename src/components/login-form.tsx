@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
-export default function LoginForm() {
+export default function LoginForm({ organizationName }: { organizationName: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [error, setError] = useState("");
@@ -33,9 +33,9 @@ export default function LoginForm() {
       return;
     }
 
-    router.replace("/dashboard");
+    router.replace("/admin/dashboard");
     router.refresh();
   }
 
-  return <main className="auth-page"><section className="auth-card"><div className="auth-brand"><div className="mark"><span>Q</span></div><span><strong>AOMA</strong><small>Question Bank</small></span></div><div className="auth-heading"><h1>{mode === "login" ? "Welcome back" : "Create student account"}</h1><p>{mode === "login" ? "Sign in to continue to your workspace." : "After signing up, join a class with its code. A teacher or administrator approves the request."}</p></div><div className="auth-tabs"><button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>Sign in</button><button type="button" className={mode === "signup" ? "active" : ""} onClick={() => setMode("signup")}>Student sign up</button></div><form onSubmit={submit}>{mode === "signup" && <label><span>Full name</span><input name="name" autoComplete="name" required /></label>}<label><span>Username</span><input name="username" type="text" inputMode="text" autoComplete="username" autoCapitalize="none" spellCheck={false} minLength={3} maxLength={30} pattern="[A-Za-z0-9_.]+" required />{mode === "signup" && <small>3–30 characters; letters, numbers, underscores, and periods</small>}</label><label><span>Password</span><input name="password" type="password" minLength={10} autoComplete={mode === "signup" ? "new-password" : "current-password"} required /><small>At least 10 characters</small></label>{error && <p className="auth-error" role="alert">{error}</p>}<button className="primary-button wide" disabled={working}>{working ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}</button></form></section></main>;
+  return <main className="auth-page"><section className="auth-card"><div className="auth-brand"><div className="mark"><span>Q</span></div><span><strong>{organizationName}</strong><small>Question Bank</small></span></div><div className="auth-heading"><h1>{mode === "login" ? "Welcome back" : "Create student account"}</h1><p>{mode === "login" ? "Sign in to continue to your workspace." : "After signing up, join a class with its code. A teacher or administrator approves the request."}</p></div><div className="auth-tabs"><button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>Sign in</button><button type="button" className={mode === "signup" ? "active" : ""} onClick={() => setMode("signup")}>Student sign up</button></div><form onSubmit={submit}>{mode === "signup" && <label><span>Full name</span><input name="name" autoComplete="name" required /></label>}<label><span>Username</span><input name="username" type="text" inputMode="text" autoComplete="username" autoCapitalize="none" spellCheck={false} minLength={3} maxLength={30} pattern="[A-Za-z0-9_.]+" required />{mode === "signup" && <small>3–30 characters; letters, numbers, underscores, and periods</small>}</label><label><span>Password</span><input name="password" type="password" minLength={10} autoComplete={mode === "signup" ? "new-password" : "current-password"} required /><small>At least 10 characters</small></label>{error && <p className="auth-error" role="alert">{error}</p>}<button className="primary-button wide" disabled={working}>{working ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}</button></form></section></main>;
 }

@@ -81,11 +81,11 @@ export default function ClassDetail({ id, name, class_code, members }: { id: str
     setWorking("delete"); setSettingsMessage("");
     const response = await fetch(`/api/classes/${id}`, { method: "DELETE" });
     if (!response.ok) { const result = await response.json(); setWorking(""); setSettingsMessage(result.error ?? "Unable to delete the class."); return; }
-    router.push("/classes"); router.refresh();
+    router.push("/admin/classes"); router.refresh();
   }
 
   return <>
-    <header className="page-header compact"><div><p className="eyebrow">CLASS</p><h1>{className}</h1><p className="lede">Enrollment and student access</p></div><Link className="secondary-button" href="/classes">Back to classes</Link></header>
+    <header className="page-header compact"><div><p className="eyebrow">CLASS</p><h1>{className}</h1><p className="lede">Enrollment and student access</p></div><Link className="secondary-button" href="/admin/classes">Back to classes</Link></header>
     <section className="panel class-code-panel"><div><p className="eyebrow">ENROLLMENT CODE</p>{code ? <strong>{code}</strong> : <h2>Generate a new code</h2>}<p>{code ? "Students enter this code to request access." : "This class predates reusable codes. Generate one for students to join."}</p>{codeMessage && <small role="status">{codeMessage}</small>}</div><div>{code && <button className="secondary-button" onClick={copyCode}>Copy code</button>}<button className="primary-button" disabled={working === "code"} onClick={rotateCode}>{working === "code" ? "Generating…" : code ? "Rotate code" : "Generate code"}</button></div></section>
     {membershipError && <p className="attention-error" role="alert">{membershipError}</p>}
     <section className="panel member-panel"><div className="panel-heading"><div><h2>Pending requests</h2><p>Only teachers assigned to this class and administrators can decide.</p></div><b className="nav-badge">{pending.length}</b></div>{pending.length === 0 ? <div className="compact-empty">No pending enrollment requests.</div> : pending.map((member) => <div className="member-row" key={member.id}><span className="class-avatar">{member.name.split(/\s+/).map((part) => part[0]).join("").slice(0,2)}</span><span><strong>{member.name}</strong><small>@{member.username ?? "student"}</small></span><div><button disabled={working === member.id} onClick={() => decide(member.id, "rejected")}>Reject</button><button className="approve" disabled={working === member.id} onClick={() => decide(member.id, "active")}>Approve</button></div></div>)}</section>

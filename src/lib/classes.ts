@@ -10,7 +10,7 @@ export function hashClassCode(code: string) {
 }
 
 export function generateClassCode() {
-  return `AOMA-${randomBytes(4).toString("hex").toUpperCase()}`;
+  return `CLASS-${randomBytes(4).toString("hex").toUpperCase()}`;
 }
 
 export async function listClasses(user: AppUser) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import LocalTime from "@/components/local-time";
 
 type Check = { configured: boolean; connected: boolean };
@@ -13,7 +13,7 @@ function StateBadge({ check }: { check?: Check }) {
   return <b className="status-badge connected">Connected</b>;
 }
 
-export default function ServiceStatus() {
+export default function ServiceStatus({ organizationName, children }: { organizationName: string; children?: ReactNode }) {
   const [status, setStatus] = useState<Status>();
   const [failed, setFailed] = useState(false);
 
@@ -41,7 +41,8 @@ export default function ServiceStatus() {
   }, []);
 
   return <>
-    <header className="page-header compact"><div><p className="eyebrow">DEPLOYMENT</p><h1>Settings</h1><p className="lede">Check the services connected to this AOMA deployment.</p></div><button className="secondary-button" onClick={refresh}>Refresh status</button></header>
+    <header className="page-header compact"><div><p className="eyebrow">DEPLOYMENT</p><h1>Settings</h1><p className="lede">Manage {organizationName} and check its connected services.</p></div><button className="secondary-button" onClick={refresh}>Refresh status</button></header>
+    {children}
     <section className="panel settings-panel">
       <div className="panel-heading"><div><h2>Service connections</h2><p>Credentials are read securely from the deployment environment.</p></div>{status && <span className="checked-time"><LocalTime value={status.checkedAt} format="time" prefix="Checked " /></span>}</div>
       {failed && <div className="setup-message error">The service check could not run. Try again in a moment.</div>}

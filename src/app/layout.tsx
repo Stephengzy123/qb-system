@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AOMA Question Bank",
-  description: "AOMA's private question bank and assignment workspace",
+  title: "Question Bank",
+  description: "Private question bank and assignment workspace",
 };
 
 const themeScript = `(function(){try{var saved=localStorage.getItem('aoma-theme');var theme=saved==='dark'||saved==='light'?saved:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme}catch(e){}})()`;

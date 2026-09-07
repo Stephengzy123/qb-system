@@ -2,6 +2,7 @@ import Link from "next/link";
 import LocalTime from "@/components/local-time";
 import Workspace from "@/components/workspace";
 import { getDatabase, requireAppUser } from "@/lib/app-user";
+import { getOrganizationName } from "@/lib/organization";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ const actionLabels: Record<string, string> = {
   class_renamed: "Renamed class",
   class_archived: "Deleted class",
   class_code_rotated: "Rotated class code",
+  organization_renamed: "Renamed organization",
 };
 
 function describeEvent(event: AuditEvent) {
@@ -36,6 +38,7 @@ function describeEvent(event: AuditEvent) {
 export default async function AuditLogsPage() {
   const user = await requireAppUser({ staff: true });
   const database = getDatabase();
+  const organizationName = await getOrganizationName();
   const visibility = user.role === "admin" ? "" : `AND (
     a.actor_user_id = $1
     OR (a.entity_type = 'class' AND EXISTS (
@@ -62,9 +65,9 @@ export default async function AuditLogsPage() {
     WHERE 1 = 1 ${visibility}
     ORDER BY a.created_at DESC
     LIMIT 200`, user.role === "admin" ? [] : [user.id]);
-  return <Workspace view="audit" user={user}>
+  return <Workspace view="audit" user={user} organizationName={organizationName}>
     <header className="page-header compact"><div><p className="eyebrow">ADMINISTRATION</p><h1>Audit logs</h1><p className="lede">Review administrative activity and content imports.</p></div></header>
-    <nav className="subnav" aria-label="Audit log sections"><Link className="active" href="/audit-logs">Activity</Link><Link href="/audit-logs/imports">Import history</Link></nav>
+    <nav className="subnav" aria-label="Audit log sections"><Link className="active" href="/admin/audit-logs">Activity</Link><Link href="/admin/audit-logs/imports">Import history</Link></nav>
     <section className="panel audit-panel"><div className="panel-heading"><div><h2>Activity</h2><p>Approvals, class changes, publishing, and reopen actions</p></div><b className="nav-badge">{events.rowCount ?? 0}</b></div>{events.rowCount === 0 ? <div className="empty-state"><span>⌁</span><h2>No audit events yet</h2><p>Administrative actions will appear here as they occur.</p></div> : <div className="audit-list">{events.rows.map((event) => <article className="audit-row" key={event.id}><span className="audit-icon">⌁</span><div><strong>{describeEvent(event)}</strong><small>By {event.actor_name ?? "System"}{event.actor_username ? ` (@${event.actor_username})` : ""}</small></div><LocalTime value={new Date(event.created_at).toISOString()} /></article>)}</div>}</section>
   </Workspace>;
 }

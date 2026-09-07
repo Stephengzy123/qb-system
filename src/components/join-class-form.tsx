@@ -27,5 +27,5 @@ export default function JoinClassForm({ onJoined, preview = false }: { onJoined?
     if (!onJoined) router.refresh();
   }
 
-  return <section className="panel join-class"><div><h2>Join a class</h2><p>Enter the code your teacher gave you.</p></div><form onSubmit={submit}><input name="code" placeholder="AOMA-XXXXXXXX" autoCapitalize="characters" required disabled={preview} /><button className="primary-button" disabled={working || preview}>{working ? "Sending…" : "Request access"}</button></form>{error && <p className="auth-error">{error}</p>}{message && <p className="join-success" role="status">{message}</p>}</section>;
+  return <section className="panel join-class"><div><h2>Join a class</h2><p>Enter the code your teacher gave you.</p></div><form onSubmit={submit}><input name="code" placeholder="CLASS-XXXXXXXX" autoCapitalize="characters" required disabled={preview} /><button className="primary-button" disabled={working || preview}>{working ? "Sending…" : "Request access"}</button></form>{error && <p className="auth-error">{error}</p>}{message && <p className="join-success" role="status">{message}</p>}</section>;
 }
