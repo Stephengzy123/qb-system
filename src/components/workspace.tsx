@@ -5,9 +5,9 @@ import { type ReactNode } from "react";
 import SignOutButton from "@/components/sign-out-button";
 import type { StaffSummary } from "@/lib/app-user";
 
-export type View = "overview" | "library" | "classes" | "assignments" | "audit";
+export type View = "overview" | "library" | "classes" | "assignments" | "audit" | "account";
 
-const navItems: { id: Exclude<View, "audit">; label: string; icon: string; href: string }[] = [
+const navItems: { id: Exclude<View, "audit" | "account">; label: string; icon: string; href: string }[] = [
   { id: "overview", label: "Overview", icon: "⌂", href: "/dashboard" },
   { id: "library", label: "Question bank", icon: "▤", href: "/question-bank" },
   { id: "classes", label: "Classes", icon: "◉", href: "/classes" },
@@ -62,6 +62,7 @@ export default function Workspace({ view, user, summary, children }: { view: Vie
       <div className="sidebar-bottom">
         <Link href="/student"><span className="nav-icon">◇</span>Student view</Link>
         <Link className={view === "audit" ? "active" : ""} href="/audit-logs"><span className="nav-icon">⌁</span>Audit logs</Link>
+        <Link className={view === "account" ? "active" : ""} href="/account"><span className="nav-icon">◎</span>Account</Link>
         <Link href="/settings"><span className="nav-icon">⚙</span>Settings</Link>
         <div className="profile"><span>{initials}</span><div><strong>{user.displayName}</strong><small>{user.role}</small></div><SignOutButton /></div>
       </div>

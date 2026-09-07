@@ -1,8 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function JoinClassForm() {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
@@ -17,6 +19,7 @@ export default function JoinClassForm() {
       ? `You are already enrolled in ${result.className}.`
       : `Request sent to ${result.className}. A teacher or administrator must approve it.`);
     event.currentTarget.reset();
+    router.refresh();
   }
 
   return <section className="panel join-class"><div><h2>Join a class</h2><p>Enter the code your teacher gave you.</p></div><form onSubmit={submit}><input name="code" placeholder="AOMA-XXXXXXXX" autoCapitalize="characters" required /><button className="primary-button" disabled={working}>{working ? "Sending…" : "Request access"}</button></form>{error && <p className="auth-error">{error}</p>}{message && <p className="join-success" role="status">{message}</p>}</section>;

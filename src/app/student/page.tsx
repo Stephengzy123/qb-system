@@ -13,7 +13,7 @@ export default async function StudentPage() {
   return <div className="student-shell">
     <header className="student-header">
       <div className="student-brand"><div className="mark"><span>Q</span></div><span><strong>AOMA</strong><small>Student workspace</small></span></div>
-      <div className="student-account">{isPreview && <Link className="secondary-button student-exit" href="/dashboard">← Exit student view</Link>}<span>{user.displayName}</span><SignOutButton /></div>
+      <div className="student-account">{isPreview ? <Link className="secondary-button student-exit" href="/dashboard">← Exit student view</Link> : <Link className="secondary-button student-exit" href="/account">Account</Link>}<span>{user.displayName}</span><SignOutButton /></div>
     </header>
     {isPreview && <div className="preview-banner"><strong>Student view preview</strong><span>You are viewing the workspace as a student would. Staff controls are hidden.</span><Link href="/dashboard">Exit preview</Link></div>}
     <main className="student-main">

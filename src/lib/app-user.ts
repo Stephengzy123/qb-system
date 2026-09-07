@@ -6,10 +6,20 @@ import { auth } from "@/lib/auth";
 export type AppUser = {
   id: string;
   authSubject: string;
+  username: string;
   email: string;
   displayName: string;
   role: "student" | "teacher" | "admin";
   status: "pending" | "active" | "rejected";
+};
+
+type AppUserRow = {
+  id: string;
+  auth_subject: string;
+  email: string;
+  display_name: string;
+  default_role: AppUser["role"];
+  approval_status: AppUser["status"];
 };
 
 let pool: Pool | undefined;
@@ -29,10 +39,22 @@ export async function getAppUser(): Promise<AppUser | null> {
   const initialAdminUsername = process.env.INITIAL_ADMIN_USERNAME?.trim().toLowerCase();
   const isInitialAdmin = Boolean(initialAdminUsername && sessionUser.username?.toLowerCase() === initialAdminUsername);
 
-  const result = await database.query<{
-    id: string; auth_subject: string; email: string; display_name: string;
-    default_role: AppUser["role"]; approval_status: AppUser["status"];
-  }>(`INSERT INTO users (auth_subject, email, display_name, default_role, approval_status, approved_at)
+  let result = await database.query<AppUserRow>(`SELECT id, auth_subject, email, display_name, default_role, approval_status
+     FROM users WHERE auth_subject = $1`, [session.user.id]);
+
+  const existing = result.rows[0];
+  if (existing && (existing.email !== sessionUser.email || existing.display_name !== session.user.name || (isInitialAdmin && existing.default_role !== "admin"))) {
+    result = await database.query<AppUserRow>(`UPDATE users SET
+       email = $2,
+       display_name = $3,
+       default_role = CASE WHEN $4::boolean THEN 'admin'::user_role ELSE default_role END,
+       updated_at = now()
+     WHERE auth_subject = $1
+     RETURNING id, auth_subject, email, display_name, default_role, approval_status`, [
+      session.user.id, sessionUser.email, session.user.name, isInitialAdmin,
+    ]);
+  } else if (!existing) {
+    result = await database.query<AppUserRow>(`INSERT INTO users (auth_subject, email, display_name, default_role, approval_status, approved_at)
      VALUES ($1, $2, $3, $4::user_role, $5::account_status,
        CASE WHEN $5::account_status = 'active'::account_status THEN now() ELSE NULL END)
      ON CONFLICT (auth_subject) DO UPDATE SET
@@ -47,16 +69,31 @@ export async function getAppUser(): Promise<AppUser | null> {
       isInitialAdmin ? "admin" : "student",
       "active",
     ]);
+  }
 
   const row = result.rows[0];
   return {
     id: row.id,
     authSubject: row.auth_subject,
+    username: sessionUser.username ?? "",
     email: row.email,
     displayName: row.display_name,
     role: row.default_role,
     status: row.approval_status,
   };
+}
+
+export async function getStudentMemberships(userId: string) {
+  const database = getDatabase();
+  const result = await database.query<{
+    id: string; class_name: string; status: "pending" | "active" | "rejected"; requested_at: Date;
+  }>(`SELECT cm.id, c.name AS class_name, cm.status, cm.requested_at
+       FROM class_memberships cm
+       JOIN classes c ON c.id = cm.class_id
+      WHERE cm.user_id = $1 AND cm.role = 'student' AND c.archived_at IS NULL
+      ORDER BY CASE cm.status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 ELSE 2 END,
+               cm.requested_at DESC`, [userId]);
+  return result.rows;
 }
 
 export type StaffSummary = {
