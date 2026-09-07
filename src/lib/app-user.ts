@@ -25,8 +25,9 @@ export async function getAppUser(): Promise<AppUser | null> {
   if (!session) return null;
 
   const database = getDatabase();
-  const adminEmail = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase();
-  const isInitialAdmin = Boolean(adminEmail && session.user.email.toLowerCase() === adminEmail);
+  const sessionUser = session.user as typeof session.user & { username?: string | null };
+  const initialAdminUsername = process.env.INITIAL_ADMIN_USERNAME?.trim().toLowerCase();
+  const isInitialAdmin = Boolean(initialAdminUsername && sessionUser.username?.toLowerCase() === initialAdminUsername);
 
   const result = await database.query<{
     id: string; auth_subject: string; email: string; display_name: string;
@@ -40,7 +41,7 @@ export async function getAppUser(): Promise<AppUser | null> {
        updated_at = now()
      RETURNING id, auth_subject, email, display_name, default_role, approval_status`, [
       session.user.id,
-      session.user.email,
+      sessionUser.email,
       session.user.name,
       isInitialAdmin ? "admin" : "student",
       "active",

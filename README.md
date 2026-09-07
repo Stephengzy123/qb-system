@@ -6,7 +6,7 @@ First implementation draft of a private, image-first question bank and assignmen
 
 The current implementation includes:
 
-- email/password sign-up and login
+- username/password sign-up and login
 - separate staff and student workspaces
 - real class creation with private, random class codes
 - student join requests and class-scoped teacher/admin approval
@@ -31,11 +31,23 @@ The application starts with honest empty states. It does not create sample class
 ## Local development
 
 ```bash
+cd /Users/stephengzy/.codex/.chatgpt-projects/g-p-6a9dffd9532c8191b59b62f2322237cc/qb-system
 npm install
 npm run dev
 ```
 
 Copy `.env.example` to `.env.local` when connecting external services.
+
+To link this checkout to the existing Vercel project and download its Development variables:
+
+```bash
+cd /Users/stephengzy/.codex/.chatgpt-projects/g-p-6a9dffd9532c8191b59b62f2322237cc/qb-system
+npx vercel link
+npx vercel env pull .env.local
+npm run dev
+```
+
+Next.js automatically loads `.env.local` on the local server. These values remain server-only unless a variable name starts with `NEXT_PUBLIC_`; `.env.local` and the `.vercel` project link are ignored by Git.
 
 ## Deployment
 
@@ -51,7 +63,7 @@ The current visual draft runs without external services. The variables marked **
 | --- | --- | --- | --- |
 | `DATABASE_URL` | Required for backend | Yes | PostgreSQL connection string. For the preferred Neon setup, use the pooled connection string supplied by Neon. It contains database credentials and must remain server-only. |
 | `AUTH_SECRET` | Required for authentication | Yes | High-entropy secret used by the selected authentication/session provider to sign or encrypt session data. Generate a unique value for every customer deployment. Do not reuse it between environments. |
-| `INITIAL_ADMIN_EMAIL` | Required for initial setup | Treat as private configuration | Email address that receives an administrator profile after signing up. Other self-created accounts become students; their individual class join requests remain pending until an authorized teacher or administrator approves them. Use Stephen's intended administrator email, with matching capitalization not required. |
+| `INITIAL_ADMIN_USERNAME` | Required for initial setup | Treat as private configuration | Username that receives an administrator profile after signing up. Other self-created accounts become students; their individual class join requests remain pending until an authorized teacher or administrator approves them. Matching is case-insensitive. |
 | `BETTER_AUTH_URL` | Optional | No | Canonical deployed application origin, such as `https://questions.aoma.ca`. Vercel's production hostname is used automatically when this is omitted. Set it explicitly when using a custom domain. |
 | `R2_ACCOUNT_ID` | Required for uploads | Treat as private configuration | Cloudflare account identifier that owns the R2 bucket. It is used to construct the account-specific R2 API endpoint. |
 | `R2_ACCESS_KEY_ID` | Required for uploads | Yes | Access-key identifier for the server-side R2 API token. The token should be limited to the intended private bucket and required operations. |

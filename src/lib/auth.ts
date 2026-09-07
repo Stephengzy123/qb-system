@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { username } from "better-auth/plugins";
 import { Pool } from "pg";
 
 const connectionString = process.env.DATABASE_URL ?? "postgresql://local:local@127.0.0.1:5432/aoma";
@@ -20,4 +21,5 @@ export const auth = betterAuth({
   advanced: {
     database: { joins: true },
   },
+  plugins: [username({ minUsernameLength: 3, maxUsernameLength: 30 })],
 });
