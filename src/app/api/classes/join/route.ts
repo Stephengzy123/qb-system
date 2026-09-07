@@ -15,11 +15,12 @@ export async function POST(request: Request) {
     VALUES ($1, $2, 'student', 'pending')
     ON CONFLICT (class_id, user_id) DO UPDATE
       SET status = 'pending', requested_at = now(), resolved_at = NULL, resolved_by = NULL
-      WHERE class_memberships.status = 'rejected'
+      WHERE class_memberships.status = 'removed'
     RETURNING id, status, requested_at`, [target.id, user.id]);
   const row = membership.rows[0] ?? (await database.query<{ id: string; status: string; requested_at: Date }>(
     "SELECT id, status, requested_at FROM class_memberships WHERE class_id = $1 AND user_id = $2",
     [target.id, user.id],
   )).rows[0];
+  if (row.status === "rejected") return NextResponse.json({ error: `Your request to ${target.name} was rejected. Contact a teacher or administrator if you believe this should change.` }, { status: 409 });
   return NextResponse.json({ id: row.id, className: target.name, status: row.status, requestedAt: row.requested_at });
 }

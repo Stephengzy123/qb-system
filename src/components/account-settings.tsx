@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import JoinClassForm, { type JoinedClass } from "@/components/join-class-form";
+import LocalTime from "@/components/local-time";
 
 type Membership = {
   id: string;
@@ -70,6 +71,6 @@ export default function AccountSettings({ user, memberships }: {
       <div className="panel-heading"><div><h2>Change password</h2><p>Use at least 10 characters</p></div></div>
       <form onSubmit={changePassword}><label><span>Current password</span><input name="currentPassword" type="password" autoComplete="current-password" required /></label><label><span>New password</span><input name="newPassword" type="password" minLength={10} autoComplete="new-password" required /></label><label><span>Confirm new password</span><input name="confirmPassword" type="password" minLength={10} autoComplete="new-password" required /></label>{passwordError && <p className="auth-error" role="alert">{passwordError}</p>}{passwordMessage && <p className="form-success" role="status">{passwordMessage}</p>}<button className="primary-button" disabled={working !== null}>{working === "password" ? "Changing…" : "Change password"}</button></form>
     </section>
-    {user.role === "student" && <section className="account-enrollment"><JoinClassForm onJoined={showJoinedClass} /><section className="panel account-panel membership-panel"><div className="panel-heading"><div><h2>My classes</h2><p>Enrollment requests and approved classes</p></div></div>{membershipItems.length === 0 ? <div className="compact-empty">You have not requested access to a class yet.</div> : <div className="membership-list">{membershipItems.map((membership) => <div key={membership.id}><span><strong>{membership.class_name}</strong><small>Requested {new Date(membership.requested_at).toLocaleDateString()}</small></span><b className={`status-badge ${membership.status}`}>{membership.status}</b></div>)}</div>}</section></section>}
+    {user.role === "student" && <section className="account-enrollment"><JoinClassForm onJoined={showJoinedClass} /><section className="panel account-panel membership-panel"><div className="panel-heading"><div><h2>My classes</h2><p>Enrollment requests and approved classes</p></div></div>{membershipItems.length === 0 ? <div className="compact-empty">You have not requested access to a class yet.</div> : <div className="membership-list">{membershipItems.map((membership) => <div key={membership.id}><span><strong>{membership.class_name}</strong><small><LocalTime value={new Date(membership.requested_at).toISOString()} format="date" prefix="Requested " /></small></span><b className={`status-badge ${membership.status}`}>{membership.status}</b></div>)}</div>}</section></section>}
   </div>;
 }

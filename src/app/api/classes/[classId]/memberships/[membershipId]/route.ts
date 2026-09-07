@@ -49,17 +49,17 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const client = await database.connect();
   try {
     await client.query("BEGIN");
-    const result = await client.query("UPDATE class_memberships SET status = 'rejected', resolved_at = now(), resolved_by = $1 WHERE id = $2 AND class_id = $3 AND role = 'student' AND status = 'active' RETURNING id", [user.id, membershipId, classId]);
+    const result = await client.query("UPDATE class_memberships SET status = 'removed', resolved_at = now(), resolved_by = $1 WHERE id = $2 AND class_id = $3 AND role = 'student' AND status = 'active' RETURNING id", [user.id, membershipId, classId]);
     if (!result.rowCount) {
       const existing = await client.query<{ status: string }>("SELECT status FROM class_memberships WHERE id = $1 AND class_id = $2 AND role = 'student'", [membershipId, classId]);
       await client.query("ROLLBACK");
-      if (existing.rows[0]?.status === "rejected") return NextResponse.json({ status: "rejected", alreadyRemoved: true });
+      if (existing.rows[0]?.status === "removed") return NextResponse.json({ status: "removed", alreadyRemoved: true });
       if (existing.rowCount) return NextResponse.json({ error: "Only active students can be removed." }, { status: 409 });
       return NextResponse.json({ error: "Class member does not exist." }, { status: 404 });
     }
     await client.query("INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, metadata) VALUES ($1, 'class_member_removed', 'class_membership', $2, jsonb_build_object('class_id', $3::text))", [user.id, membershipId, classId]);
     await client.query("COMMIT");
-    return NextResponse.json({ status: "rejected" });
+    return NextResponse.json({ status: "removed" });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Unable to remove class member", error);

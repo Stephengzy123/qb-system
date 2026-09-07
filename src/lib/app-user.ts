@@ -94,7 +94,7 @@ export async function getStudentMemberships(userId: string) {
   }>(`SELECT cm.id, c.name AS class_name, cm.status, cm.requested_at
        FROM class_memberships cm
        JOIN classes c ON c.id = cm.class_id
-      WHERE cm.user_id = $1 AND cm.role = 'student' AND c.archived_at IS NULL
+      WHERE cm.user_id = $1 AND cm.role = 'student' AND cm.status <> 'removed' AND c.archived_at IS NULL
       ORDER BY CASE cm.status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 ELSE 2 END,
                cm.requested_at DESC`, [userId]);
   return result.rows;
