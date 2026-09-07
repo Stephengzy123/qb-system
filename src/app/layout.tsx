@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Question Bank",
-  description: "Private question bank and assignment workspace",
+  title: "AOMA Question Bank",
+  description: "AOMA's private question bank and assignment workspace",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
