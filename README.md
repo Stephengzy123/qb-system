@@ -4,12 +4,15 @@ First implementation draft of a private, image-first question bank and assignmen
 
 ## Current draft
 
-The current interface covers the teacher/admin workspace:
+The current implementation includes:
 
-- operational overview
-- question-set browsing and filtering
-- class overview and enrollment indicators
-- assignment overview
+- email/password sign-up and login
+- separate staff and student workspaces
+- real class creation with private, random class codes
+- student join requests and class-scoped teacher/admin approval
+- live dashboard counts
+- empty states with no generated sample records
+- service connection checks for Neon and Cloudflare R2
 - responsive layouts for desktop and mobile
 
 The initial PostgreSQL schema is in `database/001_initial_schema.sql`. It establishes the approved foundations for:
@@ -23,7 +26,7 @@ The initial PostgreSQL schema is in `database/001_initial_schema.sql`. It establ
 - permanent submission/reopen history
 - imports, private assets, reconciliation, and audit logs
 
-The visible data is representative seed data for the first product draft. Authentication, live database reads, R2 uploads, and grading services are the next implementation slice.
+The application starts with honest empty states. It does not create sample classes, questions, students, or assignments.
 
 ## Local development
 
@@ -48,6 +51,8 @@ The current visual draft runs without external services. The variables marked **
 | --- | --- | --- | --- |
 | `DATABASE_URL` | Required for backend | Yes | PostgreSQL connection string. For the preferred Neon setup, use the pooled connection string supplied by Neon. It contains database credentials and must remain server-only. |
 | `AUTH_SECRET` | Required for authentication | Yes | High-entropy secret used by the selected authentication/session provider to sign or encrypt session data. Generate a unique value for every customer deployment. Do not reuse it between environments. |
+| `INITIAL_ADMIN_EMAIL` | Required for initial setup | Treat as private configuration | Email address that receives an administrator profile after signing up. Other self-created accounts become students; their individual class join requests remain pending until an authorized teacher or administrator approves them. Use Stephen's intended administrator email, with matching capitalization not required. |
+| `BETTER_AUTH_URL` | Optional | No | Canonical deployed application origin, such as `https://questions.aoma.ca`. Vercel's production hostname is used automatically when this is omitted. Set it explicitly when using a custom domain. |
 | `R2_ACCOUNT_ID` | Required for uploads | Treat as private configuration | Cloudflare account identifier that owns the R2 bucket. It is used to construct the account-specific R2 API endpoint. |
 | `R2_ACCESS_KEY_ID` | Required for uploads | Yes | Access-key identifier for the server-side R2 API token. The token should be limited to the intended private bucket and required operations. |
 | `R2_SECRET_ACCESS_KEY` | Required for uploads | Yes | Secret portion of the R2 API credential. It must only be available to server-side code. Never prefix it with `NEXT_PUBLIC_`. |

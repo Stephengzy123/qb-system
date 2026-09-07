@@ -1,6 +1,10 @@
 import ServiceStatus from "@/components/service-status";
 import Workspace from "@/components/workspace";
+import { requireAppUser } from "@/lib/app-user";
 
-export default function SettingsPage() {
-  return <Workspace view="overview"><ServiceStatus /></Workspace>;
+export const dynamic = "force-dynamic";
+
+export default async function SettingsPage() {
+  const user = await requireAppUser({ staff: true });
+  return <Workspace view="overview" user={user}><ServiceStatus /></Workspace>;
 }

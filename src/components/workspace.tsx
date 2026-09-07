@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode } from "react";
+import SignOutButton from "@/components/sign-out-button";
+import type { StaffSummary } from "@/lib/app-user";
 
 export type View = "overview" | "library" | "classes" | "assignments";
 
@@ -12,70 +14,32 @@ const navItems: { id: View; label: string; icon: string; href: string }[] = [
   { id: "assignments", label: "Assignments", icon: "✓", href: "/assignments" },
 ];
 
-const assignments = [
-  { title: "Integration review", className: "Calculus 12 · Block A", progress: "26 / 28", due: "Today, 11:59 PM", status: "Open", tone: "blue" },
-  { title: "Normal distributions", className: "Statistics 12", progress: "21 / 24", due: "Sep 9", status: "Open", tone: "mint" },
-  { title: "Limits checkpoint", className: "Calculus 12 · Block B", progress: "30 / 30", due: "Sep 4", status: "Ready to release", tone: "violet" },
-];
-
-const sets = [
-  { name: "Integration Practice", path: "Calculus / Unit 4", questions: 204, missing: 3, updated: "12 min ago" },
-  { name: "Normal Distribution", path: "Statistics / Unit 2", questions: 86, missing: 0, updated: "Yesterday" },
-  { name: "Limits & Continuity", path: "Calculus / Unit 1", questions: 120, missing: 0, updated: "Sep 3" },
-  { name: "Probability Review", path: "Statistics / Review", questions: 72, missing: 5, updated: "Aug 29" },
-];
-
 function Mark() {
   return <div className="mark" aria-hidden="true"><span>Q</span></div>;
 }
 
-function Overview() {
-  return <>
-    <header className="page-header">
-      <div><p className="eyebrow">SUNDAY, SEPTEMBER 6</p><h1>Good afternoon, Stephen.</h1><p className="lede">Here’s what needs your attention across the question bank.</p></div>
-      <Link className="primary-button" href="/assignments/new"><span aria-hidden="true">＋</span> Create assignment</Link>
-    </header>
-    <section className="metric-grid" aria-label="Question bank summary">
-      <article className="metric-card accent-blue"><div className="metric-top"><span className="metric-icon">▤</span><span className="trend">+86 this week</span></div><strong>2,418</strong><span>Questions</span></article>
-      <article className="metric-card accent-violet"><div className="metric-top"><span className="metric-icon">✓</span><span className="trend">3 active</span></div><strong>12</strong><span>Assignments</span></article>
-      <article className="metric-card accent-mint"><div className="metric-top"><span className="metric-icon">◉</span><span className="trend">Across 4 classes</span></div><strong>106</strong><span>Students</span></article>
-      <article className="metric-card accent-amber"><div className="metric-top"><span className="metric-icon">!</span><span className="trend warm">Needs review</span></div><strong>8</strong><span>Missing answer keys</span></article>
-    </section>
-    <div className="dashboard-grid">
-      <section className="panel assignment-panel">
-        <div className="panel-heading"><div><h2>Active assignments</h2><p>Submission progress across your classes</p></div><Link className="text-button" href="/assignments">View all <span>→</span></Link></div>
-        <div className="assignment-list">{assignments.map((item) => { const [done, total] = item.progress.split(" / ").map(Number); return <article className="assignment-row" key={item.title}><div className={`assignment-symbol ${item.tone}`}>↗</div><div className="assignment-copy"><h3>{item.title}</h3><p>{item.className}</p></div><div className="progress-block"><div className="progress-label"><span>{item.progress} submitted</span><b>{Math.round((done / total) * 100)}%</b></div><div className="progress-track"><i style={{ width: `${(done / total) * 100}%` }} /></div></div><div className="due"><span>{item.due}</span><b className={item.status === "Ready to release" ? "release" : "open"}>{item.status}</b></div><button className="icon-button" aria-label={`More options for ${item.title}`}>•••</button></article>; })}</div>
-      </section>
-      <aside className="panel attention-panel">
-        <div className="panel-heading"><div><h2>Needs attention</h2><p>Quick actions waiting for you</p></div></div>
-        <Link className="attention-item" href="/classes?filter=pending"><span className="attention-icon person">♙</span><span><strong>4 enrollment requests</strong><small>Across 2 classes</small></span><b>→</b></Link>
-        <Link className="attention-item" href="/question-bank?filter=missing-keys"><span className="attention-icon key">⌁</span><span><strong>8 missing answer keys</strong><small>In 2 question sets</small></span><b>→</b></Link>
-        <button className="attention-item"><span className="attention-icon broken">◇</span><span><strong>1 broken asset</strong><small>Detected by reconciliation</small></span><b>→</b></button>
-      </aside>
-    </div>
-    <section className="panel recent-panel"><div className="panel-heading"><div><h2>Recently updated sets</h2><p>Your latest question-bank activity</p></div><Link className="text-button" href="/question-bank">Open question bank <span>→</span></Link></div><SetTable items={sets.slice(0,3)} /></section>
-  </>;
+function ProductEmpty({ icon, title, body, action, href }: { icon: string; title: string; body: string; action?: string; href?: string }) {
+  return <div className="empty-state product-empty"><span>{icon}</span><h2>{title}</h2><p>{body}</p>{action && href && <Link className="primary-button" href={href}>{action}</Link>}</div>;
 }
 
-function SetTable({ items }: { items: typeof sets }) {
-  return <div className="set-table"><div className="set-row set-head"><span>Set</span><span>Questions</span><span>Answer keys</span><span>Updated</span><span /></div>{items.map((set) => <div className="set-row" key={set.name}><span className="set-name"><i>▤</i><span><strong>{set.name}</strong><small>{set.path}</small></span></span><span>{set.questions}</span><span>{set.missing ? <b className="missing">{set.missing} missing</b> : <b className="complete">Complete</b>}</span><span className="muted">{set.updated}</span><button className="icon-button" aria-label={`More options for ${set.name}`}>•••</button></div>)}</div>;
+function Overview({ name, summary }: { name: string; summary: StaffSummary }) {
+  const isEmpty = summary.questions === 0 && summary.assignments === 0 && summary.students === 0 && summary.needsAttention === 0;
+  return <><header className="page-header"><div><p className="eyebrow">AOMA WORKSPACE</p><h1>Welcome, {name.split(" ")[0]}.</h1><p className="lede">Your question bank activity will appear here.</p></div></header><section className="metric-grid" aria-label="Question bank summary"><article className="metric-card accent-blue"><div className="metric-top"><span className="metric-icon">▤</span></div><strong>{summary.questions}</strong><span>Questions</span></article><article className="metric-card accent-violet"><div className="metric-top"><span className="metric-icon">✓</span></div><strong>{summary.assignments}</strong><span>Assignments</span></article><article className="metric-card accent-mint"><div className="metric-top"><span className="metric-icon">◉</span></div><strong>{summary.students}</strong><span>Students</span></article><article className="metric-card accent-amber"><div className="metric-top"><span className="metric-icon">!</span></div><strong>{summary.needsAttention}</strong><span>Items needing attention</span></article></section>{isEmpty && <section className="panel"><ProductEmpty icon="＋" title="Start building your question bank" body="Create a class or upload your first image-based question set. Real activity and assignments will appear here as you add them." action="Create a class" href="/classes" /></section>}</>;
 }
 
 function Library() {
-  const [query, setQuery] = useState("");
-  const visibleSets = useMemo(() => sets.filter((set) => `${set.name} ${set.path}`.toLowerCase().includes(query.toLowerCase())), [query]);
-  return <><header className="page-header compact"><div><p className="eyebrow">CONTENT</p><h1>Question bank</h1><p className="lede">Organize, review, and reuse your question sets.</p></div><button className="primary-button">↑ Upload set</button></header><div className="toolbar"><label className="search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search sets and folders" /></label><button className="secondary-button">＋ New folder</button></div><div className="library-layout"><aside className="folder-tree panel"><p className="eyebrow">FOLDERS</p><button className="folder active">▾ <span>All questions</span><b>2,418</b></button><button className="folder">▾ <span>Calculus</span><b>1,284</b></button><button className="folder nested">└ <span>Unit 4</span><b>204</b></button><button className="folder">▾ <span>Statistics</span><b>914</b></button><button className="folder">▸ <span>Archive</span><b>220</b></button></aside><section className="panel library-panel"><div className="panel-heading"><div><h2>All sets</h2><p>{visibleSets.length} sets shown</p></div><button className="secondary-button">Sort: Recently updated</button></div><SetTable items={visibleSets} /></section></div></>;
+  return <><header className="page-header compact"><div><p className="eyebrow">CONTENT</p><h1>Question bank</h1><p className="lede">Organize, review, and reuse your question sets.</p></div></header><section className="panel"><ProductEmpty icon="↑" title="No question sets yet" body="Upload a folder or ZIP of question images to create the first set. Nothing shown here is sample content." action="View import workspace" href="/imports" /></section></>;
 }
 
 function Classes() {
-  const entries = [["Calculus 12 · Block A", "28 students", "CALC-A7K2", "2 pending"], ["Calculus 12 · Block B", "30 students", "CALC-B9M4", "No requests"], ["Statistics 12", "24 students", "STAT-P4Q8", "2 pending"], ["AP Calculus Review", "24 students", "APCR-X2N6", "No requests"]];
-  return <><header className="page-header compact"><div><p className="eyebrow">PEOPLE</p><h1>Classes</h1><p className="lede">Manage students, materials, and enrollment requests.</p></div><button className="primary-button">＋ Create class</button></header><section className="class-grid">{entries.map(([name,count,code,pending], i) => <article className="class-card panel" key={name}><div className={`class-stripe stripe-${i}`} /><div className="class-top"><span className="class-avatar">{name.split(" ").slice(0,2).map(x=>x[0]).join("")}</span><button className="icon-button">•••</button></div><h2>{name}</h2><p>{count} · {pending}</p><div className="code-row"><span>Class code</span><button>{code} <b>⧉</b></button></div><div className="class-actions"><button>View class</button><button>Assignments</button></div></article>)}</section></>;
+  return <><header className="page-header compact"><div><p className="eyebrow">PEOPLE</p><h1>Classes</h1><p className="lede">Manage students, materials, and enrollment requests.</p></div></header><section className="panel"><ProductEmpty icon="◉" title="No classes yet" body="Classes will appear here after an authorized teacher or administrator creates one. Pending student requests will be limited to the teacher’s assigned scope." /></section></>;
 }
 
 function Assignments() {
-  return <><header className="page-header compact"><div><p className="eyebrow">COURSEWORK</p><h1>Assignments</h1><p className="lede">Create, publish, and review assigned work.</p></div><Link className="primary-button" href="/assignments/new">＋ Create assignment</Link></header><section className="panel"><div className="tabs"><button className="active">Open <span>3</span></button><button>Drafts <span>2</span></button><button>Closed <span>7</span></button></div><div className="assignment-list expanded">{assignments.map((item) => <article className="assignment-row" key={item.title}><div className={`assignment-symbol ${item.tone}`}>↗</div><div className="assignment-copy"><h3>{item.title}</h3><p>{item.className}</p></div><div><small className="table-label">SUBMISSIONS</small><strong className="table-value">{item.progress}</strong></div><div><small className="table-label">DUE</small><strong className="table-value">{item.due}</strong></div><b className={item.status === "Ready to release" ? "release" : "open"}>{item.status}</b><button className="icon-button">•••</button></article>)}</div></section></>;
+  return <><header className="page-header compact"><div><p className="eyebrow">COURSEWORK</p><h1>Assignments</h1><p className="lede">Create, publish, and review assigned work.</p></div><Link className="primary-button" href="/assignments/new">＋ Create assignment</Link></header><section className="panel"><ProductEmpty icon="✓" title="No assignments yet" body="Assignments will appear here after you create and publish them from a real question set." /></section></>;
 }
 
-export default function Workspace({ view, children }: { view: View; children?: ReactNode }) {
-  return <div className="app-shell"><aside className="sidebar"><div className="brand"><Mark /><span><strong>Question Bank</strong><small>AOMA</small></span></div><nav aria-label="Main navigation">{navItems.map((item) => <Link key={item.id} href={item.href} className={view === item.id ? "active" : ""}><span className="nav-icon">{item.icon}</span>{item.label}{item.id === "classes" && <b className="nav-badge">4</b>}</Link>)}</nav><div className="sidebar-bottom"><Link href="/imports"><span className="nav-icon">⌁</span>Import history</Link><Link href="/settings"><span className="nav-icon">⚙</span>Settings</Link><div className="profile"><span>SG</span><div><strong>Stephen Gu</strong><small>Administrator</small></div><button aria-label="Open profile menu">⌄</button></div></div></aside><main className="main-content"><div className="mobile-bar"><div className="brand"><Mark /><strong>AOMA Question Bank</strong></div><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav></div>{children ?? <>{view === "overview" && <Overview />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}</main></div>;
+export default function Workspace({ view, user, summary, children }: { view: View; user: { displayName: string; role: string }; summary?: StaffSummary; children?: ReactNode }) {
+  const initials = user.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  return <div className="app-shell"><aside className="sidebar"><div className="brand"><Mark /><span><strong>Question Bank</strong><small>AOMA</small></span></div><nav aria-label="Main navigation">{navItems.map((item) => <Link key={item.id} href={item.href} className={view === item.id ? "active" : ""}><span className="nav-icon">{item.icon}</span>{item.label}</Link>)}</nav><div className="sidebar-bottom"><Link href="/student"><span className="nav-icon">◇</span>Student view</Link><Link href="/imports"><span className="nav-icon">⌁</span>Import history</Link><Link href="/settings"><span className="nav-icon">⚙</span>Settings</Link><div className="profile"><span>{initials}</span><div><strong>{user.displayName}</strong><small>{user.role}</small></div><SignOutButton /></div></div></aside><main className="main-content"><div className="mobile-bar"><div className="brand"><Mark /><strong>AOMA Question Bank</strong></div><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav></div>{children ?? <>{view === "overview" && <Overview name={user.displayName} summary={summary ?? { questions: 0, assignments: 0, students: 0, needsAttention: 0 }} />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}</main></div>;
 }
