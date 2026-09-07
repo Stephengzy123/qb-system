@@ -37,9 +37,9 @@ export async function getClassDetail(user: AppUser, classId: string) {
   const database = getDatabase();
   const allowed = user.role === "admin" || Boolean((await database.query("SELECT 1 FROM class_memberships WHERE class_id = $1 AND user_id = $2 AND role = 'teacher' AND status = 'active'", [classId, user.id])).rowCount);
   if (!allowed) return null;
-  const classResult = await database.query<{ id: string; name: string }>("SELECT id, name FROM classes WHERE id = $1 AND archived_at IS NULL", [classId]);
+  const classResult = await database.query<{ id: string; name: string; class_code: string | null }>("SELECT id, name, class_code FROM classes WHERE id = $1 AND archived_at IS NULL", [classId]);
   if (!classResult.rowCount) return null;
-  const members = await database.query<{ id: string; name: string; email: string; status: string }>(`SELECT cm.id, u.display_name AS name, u.email, cm.status
+  const members = await database.query<{ id: string; name: string; username: string | null; status: string }>(`SELECT cm.id, u.display_name AS name, u.username, cm.status
     FROM class_memberships cm JOIN users u ON u.id = cm.user_id
     WHERE cm.class_id = $1 AND cm.role = 'student'
     ORDER BY CASE cm.status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 ELSE 2 END, cm.requested_at`, [classId]);

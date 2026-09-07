@@ -16,6 +16,7 @@ export type AppUser = {
 type AppUserRow = {
   id: string;
   auth_subject: string;
+  username: string | null;
   email: string;
   display_name: string;
   default_role: AppUser["role"];
@@ -39,31 +40,34 @@ export async function getAppUser(): Promise<AppUser | null> {
   const initialAdminUsername = process.env.INITIAL_ADMIN_USERNAME?.trim().toLowerCase();
   const isInitialAdmin = Boolean(initialAdminUsername && sessionUser.username?.toLowerCase() === initialAdminUsername);
 
-  let result = await database.query<AppUserRow>(`SELECT id, auth_subject, email, display_name, default_role, approval_status
+  let result = await database.query<AppUserRow>(`SELECT id, auth_subject, username, email, display_name, default_role, approval_status
      FROM users WHERE auth_subject = $1`, [session.user.id]);
 
   const existing = result.rows[0];
-  if (existing && (existing.email !== sessionUser.email || existing.display_name !== session.user.name || (isInitialAdmin && existing.default_role !== "admin"))) {
+  if (existing && (existing.username !== sessionUser.username || existing.email !== sessionUser.email || existing.display_name !== session.user.name || (isInitialAdmin && existing.default_role !== "admin"))) {
     result = await database.query<AppUserRow>(`UPDATE users SET
-       email = $2,
-       display_name = $3,
-       default_role = CASE WHEN $4::boolean THEN 'admin'::user_role ELSE default_role END,
+       username = $2,
+       email = $3,
+       display_name = $4,
+       default_role = CASE WHEN $5::boolean THEN 'admin'::user_role ELSE default_role END,
        updated_at = now()
      WHERE auth_subject = $1
-     RETURNING id, auth_subject, email, display_name, default_role, approval_status`, [
-      session.user.id, sessionUser.email, session.user.name, isInitialAdmin,
+     RETURNING id, auth_subject, username, email, display_name, default_role, approval_status`, [
+      session.user.id, sessionUser.username ?? null, sessionUser.email, session.user.name, isInitialAdmin,
     ]);
   } else if (!existing) {
-    result = await database.query<AppUserRow>(`INSERT INTO users (auth_subject, email, display_name, default_role, approval_status, approved_at)
-     VALUES ($1, $2, $3, $4::user_role, $5::account_status,
-       CASE WHEN $5::account_status = 'active'::account_status THEN now() ELSE NULL END)
+    result = await database.query<AppUserRow>(`INSERT INTO users (auth_subject, username, email, display_name, default_role, approval_status, approved_at)
+     VALUES ($1, $2, $3, $4, $5::user_role, $6::account_status,
+       CASE WHEN $6::account_status = 'active'::account_status THEN now() ELSE NULL END)
      ON CONFLICT (auth_subject) DO UPDATE SET
+       username = EXCLUDED.username,
        email = EXCLUDED.email,
        display_name = EXCLUDED.display_name,
        default_role = CASE WHEN EXCLUDED.default_role = 'admin' THEN 'admin' ELSE users.default_role END,
        updated_at = now()
-     RETURNING id, auth_subject, email, display_name, default_role, approval_status`, [
+     RETURNING id, auth_subject, username, email, display_name, default_role, approval_status`, [
       session.user.id,
+      sessionUser.username ?? null,
       sessionUser.email,
       session.user.name,
       isInitialAdmin ? "admin" : "student",
@@ -75,7 +79,7 @@ export async function getAppUser(): Promise<AppUser | null> {
   return {
     id: row.id,
     authSubject: row.auth_subject,
-    username: sessionUser.username ?? "",
+    username: row.username ?? sessionUser.username ?? "",
     email: row.email,
     displayName: row.display_name,
     role: row.default_role,

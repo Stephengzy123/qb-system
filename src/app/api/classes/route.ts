@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const client = await database.connect();
   try {
     await client.query("BEGIN");
-    const created = await client.query<{ id: string }>("INSERT INTO classes (name, class_code_hash, created_by) VALUES ($1, $2, $3) RETURNING id", [name, hashClassCode(code), user.id]);
+    const created = await client.query<{ id: string }>("INSERT INTO classes (name, class_code, class_code_hash, created_by) VALUES ($1, $2, $3, $4) RETURNING id", [name, code, hashClassCode(code), user.id]);
     await client.query("INSERT INTO class_memberships (class_id, user_id, role, status, resolved_at, resolved_by) VALUES ($1, $2, 'teacher', 'active', now(), $2)", [created.rows[0].id, user.id]);
     await client.query("COMMIT");
     return NextResponse.json({ id: created.rows[0].id, name, code }, { status: 201 });
