@@ -48,3 +48,5 @@ a.attention-item{text-decoration:none}
 @media(max-width:720px){.account-grid{grid-template-columns:1fr}.account-enrollment{grid-column:1}.student-account{gap:7px}}
 @media(max-width:720px){.review-row{grid-template-columns:40px 1fr}.review-row>div:last-child{grid-column:2;flex-wrap:wrap}}
 .member-row button.remove-member{border-color:#efc9cc;color:#a33b44}.member-row button.remove-member:hover{background:#fff4f4}
+.audit-panel{overflow:hidden}.audit-list{display:grid}.audit-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:13px;min-height:72px;padding:13px 22px;border-top:1px solid #edf0f5}.audit-icon{display:grid;width:34px;height:34px;place-items:center;border-radius:9px;background:#edf1ff;color:#4b65c2;font-weight:800}.audit-row>div{display:grid;gap:5px}.audit-row strong{font-size:12px;text-transform:none}.audit-row small,.audit-row time{color:#8590a2;font-size:10px}.audit-row time{text-align:right}
+@media(max-width:720px){.audit-row{grid-template-columns:34px 1fr}.audit-row time{grid-column:2;text-align:left}}
