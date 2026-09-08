@@ -6,7 +6,7 @@ import {POST as close} from '../src/app/api/assignments/[assignmentId]/close/rou
 import {state} from './assignment-test-auth.mjs';
 const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const now=Date.parse('2026-09-08T00:00:00Z');
-const candidate=(n,errors=1,days=0)=>({version_id:id(n),grading_choice_id:id(n+10),errors,last_wrong:new Date(now-days*86400000)});
+const candidate=(n,errors=1,days=0)=>({version_id:id(n),grading_choice_id:id(n+10),errors,last_wrong:new Date(now-days*86400000),last_correct:null});
 test('question count accepts every integer from 5 to 50 and rejects invalid input',()=>{
   for(let count=5;count<=50;count++)assert.equal(parsePracticeInput({count,requestId:id(1)}).count,count);
   for(const count of [0,2,4,51,5.5,'10',null])assert.throws(()=>parsePracticeInput({count,requestId:id(1)}));
@@ -61,4 +61,30 @@ test('close records an audit event, serializes with submissions, and is idempote
   let queries=setup();state.user.role='teacher';assert.equal((await finish()).status,200);
   assert.ok(queries.some(([sql])=>sql.includes('FOR UPDATE OF a')));assert.ok(queries.some(([sql])=>sql.startsWith('INSERT INTO audit_logs')));assert.equal(queries.at(-1)[0],'COMMIT');
   queries=setup({closed:true});state.user.role='admin';assert.equal((await finish()).status,200);assert.ok(!queries.some(([sql])=>sql.startsWith('UPDATE')));
+});
+
+const corrected=(n,errors=1)=>({...candidate(n,errors,7),last_correct:new Date(now)});
+test('corrected mistakes form a small review portion even with many historical errors',()=>{
+  const unresolved=Array.from({length:60},(_,n)=>candidate(n+1));
+  const recovered=Array.from({length:60},(_,n)=>corrected(n+101,100));
+  for(const count of [5,10,17,50]) {
+    const selected=selectPracticeQuestions([...unresolved,...recovered],count,now);
+    assert.equal(selected.length,count);
+    assert.equal(selected.filter(q=>q.last_correct!==null).length,Math.round(count*0.2));
+    assert.equal(new Set(selected.map(q=>q.version_id)).size,count);
+  }
+});
+test('either pool fills shortages, including only corrected mistakes and only two available',()=>{
+  const recovered=Array.from({length:20},(_,n)=>corrected(n+101));
+  let selected=selectPracticeQuestions([candidate(1),candidate(2),...recovered],10,now);
+  assert.equal(selected.length,10);assert.equal(selected.filter(q=>q.last_correct!==null).length,8);
+  assert.equal(selectPracticeQuestions(recovered,10,now).length,10);
+  assert.equal(selectPracticeQuestions(recovered.slice(0,2),50,now).length,2);
+  selected=selectPracticeQuestions([...Array.from({length:20},(_,n)=>candidate(n+1)),corrected(101)],10,now);
+  assert.equal(selected.length,10);assert.equal(selected.filter(q=>q.last_correct!==null).length,1);
+});
+test('a fresh mistake after a correct answer returns to the main practice pool',()=>{
+  const relapsed={...candidate(1,3,0),last_correct:new Date(now-86400000)};
+  const selected=selectPracticeQuestions([relapsed,...Array.from({length:20},(_,n)=>corrected(n+101))],5,now);
+  assert.ok(selected.includes(relapsed));
 });

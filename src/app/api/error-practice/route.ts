@@ -16,12 +16,14 @@ export async function POST(request:Request) {
     }
     const candidates=(await client.query<ErrorCandidate>(`SELECT aq.question_version_id AS version_id,
       (array_agg(aq.grading_choice_id ORDER BY sa.submitted_at DESC,aq.id))[1] AS grading_choice_id,
-      count(*)::int AS errors,max(sa.submitted_at) AS last_wrong
+      count(*) FILTER(WHERE r.is_correct=false)::int AS errors,
+      max(sa.submitted_at) FILTER(WHERE r.is_correct=false) AS last_wrong,
+      max(sa.submitted_at) FILTER(WHERE r.is_correct=true) AS last_correct
       FROM responses r JOIN student_assignments sa ON sa.id=r.student_assignment_id
       JOIN assignment_questions aq ON aq.id=r.assignment_question_id
-      WHERE sa.student_id=$1 AND sa.status='submitted' AND r.is_correct=false AND aq.grading_choice_id IS NOT NULL
+      WHERE sa.student_id=$1 AND sa.status='submitted' AND r.is_correct IS NOT NULL AND aq.grading_choice_id IS NOT NULL
       AND EXISTS(SELECT 1 FROM assets asset WHERE asset.question_version_id=aq.question_version_id AND asset.status='active')
-      GROUP BY aq.question_version_id`,[user.id])).rows;
+      GROUP BY aq.question_version_id HAVING bool_or(r.is_correct=false)`,[user.id])).rows;
     const questions=selectPracticeQuestions(candidates,input.count);
     if(!questions.length) {await client.query('ROLLBACK');return Response.json({error:'No incorrect questions are available to practise yet.'},{status:400});}
     const assignment=(await client.query<{id:string}>(`INSERT INTO assignments(title,instructions,status,created_by,practice_student_id,practice_request_id,open_at,published_at)
