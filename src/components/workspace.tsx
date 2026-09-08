@@ -7,12 +7,13 @@ import ThemeToggle from "@/components/theme-toggle";
 import type { StaffSummary } from "@/lib/app-user";
 import BrandMark from "@/components/brand-mark";
 
-export type View = "overview" | "library" | "classes" | "assignments" | "audit" | "account";
+export type View = "overview" | "library" | "classes" | "assignments" | "audit" | "account" | "students";
 
 const navItems: { id: Exclude<View, "audit" | "account">; label: string; icon: string; href: string }[] = [
   { id: "overview", label: "Overview", icon: "⌂", href: "/admin/dashboard" },
   { id: "library", label: "Question bank", icon: "▤", href: "/admin/question-bank" },
   { id: "classes", label: "Classes", icon: "◉", href: "/admin/classes" },
+  { id: "students", label: "Students", icon: "♙", href: "/admin/students" },
   { id: "assignments", label: "Assignments", icon: "✓", href: "/admin/assignments" },
 ];
 
@@ -56,7 +57,7 @@ export default function Workspace({ view, user, organizationName, summary, child
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><BrandMark /><span><strong>Question Bank</strong><small>{organizationName}</small></span></div>
-      <nav aria-label="Main navigation">{navItems.map((item) => <Link key={item.id} href={item.href} className={view === item.id ? "active" : ""}><span className="nav-icon">{item.icon}</span>{item.label}</Link>)}</nav>
+      <nav aria-label="Main navigation">{navItems.filter(item => item.id !== "students" || user.role === "admin").map((item) => <Link key={item.id} href={item.href} className={view === item.id ? "active" : ""}><span className="nav-icon">{item.icon}</span>{item.label}</Link>)}</nav>
       <div className="sidebar-bottom">
         <Link href="/student"><span className="nav-icon">◇</span>Student view</Link>
         <Link className={view === "audit" ? "active" : ""} href="/admin/audit-logs"><span className="nav-icon">⌁</span>Audit logs</Link>
@@ -67,7 +68,7 @@ export default function Workspace({ view, user, organizationName, summary, child
       </div>
     </aside>
     <main className="main-content">
-      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
+      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.filter(item => item.id !== "students" || user.role === "admin").map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
       {children ?? <>{view === "overview" && <Overview name={user.displayName} organizationName={organizationName} summary={summary ?? { questions: 0, assignments: 0, students: 0, needsAttention: 0 }} />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}
     </main>
   </div>;

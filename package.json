@@ -12,7 +12,8 @@
     "test:uploads": "node --import ./tests/register.mjs --test tests/uploads.test.mjs",
     "test:uploads:ui": "playwright test",
     "test:question-bank": "node --import ./tests/register.mjs --test tests/question-bank.test.mjs",
-    "test:assignments": "node --import ./tests/register.mjs --test tests/assignments.test.mjs"
+    "test:assignments": "node --import ./tests/register.mjs --test tests/assignments.test.mjs",
+    "test:learning": "node --import ./tests/register.mjs --test tests/learning.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",

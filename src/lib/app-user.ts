@@ -21,6 +21,7 @@ type AppUserRow = {
   display_name: string;
   default_role: AppUser["role"];
   approval_status: AppUser["status"];
+  disabled_at: Date | null;
 };
 
 let pool: Pool | undefined;
@@ -40,7 +41,7 @@ export async function getAppUser(): Promise<AppUser | null> {
   const initialAdminUsername = process.env.INITIAL_ADMIN_USERNAME?.trim().toLowerCase();
   const isInitialAdmin = Boolean(initialAdminUsername && sessionUser.username?.toLowerCase() === initialAdminUsername);
 
-  let result = await database.query<AppUserRow>(`SELECT id, auth_subject, username, email, display_name, default_role, approval_status
+  let result = await database.query<AppUserRow>(`SELECT id, auth_subject, username, email, display_name, default_role, approval_status, disabled_at
      FROM users WHERE auth_subject = $1`, [session.user.id]);
 
   const existing = result.rows[0];
@@ -52,7 +53,7 @@ export async function getAppUser(): Promise<AppUser | null> {
        default_role = CASE WHEN $5::boolean THEN 'admin'::user_role ELSE default_role END,
        updated_at = now()
      WHERE auth_subject = $1
-     RETURNING id, auth_subject, username, email, display_name, default_role, approval_status`, [
+     RETURNING id, auth_subject, username, email, display_name, default_role, approval_status, disabled_at`, [
       session.user.id, sessionUser.username ?? null, sessionUser.email, session.user.name, isInitialAdmin,
     ]);
   } else if (!existing) {
@@ -65,7 +66,7 @@ export async function getAppUser(): Promise<AppUser | null> {
        display_name = EXCLUDED.display_name,
        default_role = CASE WHEN EXCLUDED.default_role = 'admin' THEN 'admin' ELSE users.default_role END,
        updated_at = now()
-     RETURNING id, auth_subject, username, email, display_name, default_role, approval_status`, [
+     RETURNING id, auth_subject, username, email, display_name, default_role, approval_status, disabled_at`, [
       session.user.id,
       sessionUser.username ?? null,
       sessionUser.email,
@@ -83,7 +84,7 @@ export async function getAppUser(): Promise<AppUser | null> {
     email: row.email,
     displayName: row.display_name,
     role: row.default_role,
-    status: row.approval_status,
+    status: row.disabled_at ? "rejected" : row.approval_status,
   };
 }
 

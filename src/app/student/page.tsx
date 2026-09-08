@@ -1,3 +1,5 @@
+import AssignmentHistory from "@/components/assignment-history";
+import { studentHistory } from "@/lib/learning";
 import Link from "next/link";
 import SignOutButton from "@/components/sign-out-button";
 import JoinClassForm from "@/components/join-class-form";
@@ -17,9 +19,11 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   const classes = isPreview ? await listClasses(user) : [];
   const requestedClassId = isPreview ? (await searchParams).classId ?? "" : "";
   const selectedClass = classes.find((item) => item.id === requestedClassId);
-  const assignments = isPreview
+  const allAssignments = isPreview
     ? selectedClass ? await getClassPreviewAssignments(user, selectedClass.id) : []
     : await getStudentAssignments(user.id);
+  const assignments=allAssignments.filter(assignment=>assignment.student_status!=="submitted");
+  const completed=isPreview?[]:(await studentHistory(user.id)).filter(item=>item.status==="submitted");
   const organizationName = await getOrganizationName();
 
   return <div className="student-shell">
@@ -34,6 +38,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
       {assignments.length === 0
         ? <section className="panel student-empty"><div className="empty-illustration">✓</div><h2>{isPreview && !selectedClass ? "Select a class to begin" : "No open assignments"}</h2><p>{isPreview && !selectedClass ? "The preview will update to show what a student in that class can access." : "New work will appear here after class enrollment is approved and a teacher publishes an assignment."}</p></section>
         : <section className="student-assignment-grid">{assignments.map((assignment) => { const contents = <><span className="student-card-icon">↗</span><div><p>{assignment.class_name}</p><h2>{assignment.title}</h2><small>{assignment.due_at ? <LocalTime value={assignment.due_at.toISOString()} prefix="Due " /> : "No due date"}</small></div><b>{assignment.student_status === "submitted" ? "Submitted" : assignment.student_status === "in_progress" ? "Continue" : "View assignment"} →</b></>; return <a className="panel student-assignment-card" href={`/student/assignments/${assignment.id}`} key={assignment.id}>{contents}</a>; })}</section>}
+      {!isPreview && <div className="completed-assignments"><AssignmentHistory items={completed} completedOnly /></div>}
     </main>
   </div>;
 }

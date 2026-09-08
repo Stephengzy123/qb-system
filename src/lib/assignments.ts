@@ -1,3 +1,4 @@
+import { assignmentReadAccess } from '@/lib/assignment-access';
 import { getDatabase, type AppUser } from '@/lib/app-user';
 import { folderTree } from '@/lib/question-imports';
 import { isUuid } from '@/lib/question-bank-model';
@@ -29,8 +30,7 @@ export async function getAssignment(user:AppUser,id:string) {
   if (!isUuid(id)) return null;
   const database=getDatabase();
   const result=await database.query<{id:string;title:string;instructions:string|null;class_name:string;status:string;due_at:Date|null}>(`SELECT a.id,a.title,a.instructions,c.name AS class_name,a.status,a.due_at FROM assignments a JOIN classes c ON c.id=a.class_id
-    WHERE a.id=$1 AND c.archived_at IS NULL AND ($3::boolean OR EXISTS(SELECT 1 FROM class_memberships cm WHERE cm.class_id=c.id AND cm.user_id=$2 AND cm.status='active' AND (
-      cm.role='teacher' OR (cm.role='student' AND a.status='open' AND (a.open_at IS NULL OR a.open_at<=now())))))`,[id,user.id,user.role==='admin']);
+    WHERE a.id=$1 AND ${assignmentReadAccess('$2','$3')}`,[id,user.id,user.role==='admin']);
   if (!result.rowCount) return null;
   const questions=await database.query<{id:string;version_id:string;name:string;asset_id:string|null;choices:{id:string;label:string}[]}>(`SELECT aq.id,aq.question_version_id AS version_id,COALESCE(v.alt_text,'Question '||(aq.position+1)) AS name,
     (SELECT id FROM assets WHERE question_version_id=v.id AND status='active' ORDER BY created_at LIMIT 1) AS asset_id,
