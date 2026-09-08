@@ -1,15 +1,13 @@
+import { cache } from "react";
 import { getDatabase } from "@/lib/app-user";
 
 export const DEFAULT_ORGANIZATION_NAME = "AOMA";
 
 export async function getOrganizationName() {
-  const result = await getDatabase().query<{ name: string }>(
-    "SELECT name FROM organization_settings WHERE singleton = true",
-  );
-  return result.rows[0]?.name ?? DEFAULT_ORGANIZATION_NAME;
+  return (await getOrganizationBranding()).name;
 }
 
-export async function getOrganizationBranding() {
+export const getOrganizationBranding = cache(async function getOrganizationBranding() {
   const result = await getDatabase().query<{ name: string; logo_storage_key: string | null; logo_updated_at: Date | null }>(
     "SELECT name, logo_storage_key, logo_updated_at FROM organization_settings WHERE singleton = true",
   );
@@ -19,4 +17,4 @@ export async function getOrganizationBranding() {
     hasCustomLogo: Boolean(row?.logo_storage_key),
     logoVersion: row?.logo_updated_at?.getTime() ?? 0,
   };
-}
+});

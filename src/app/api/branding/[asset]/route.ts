@@ -13,7 +13,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ asse
   );
   const key = result.rows[0]?.storage_key;
   const storage = getBrandingStorage();
-  if (!key || !storage) return NextResponse.redirect(new URL("/icon.svg", request.url));
+  if (!key || !storage) {
+    const fallback = asset === "favicon" ? "/default-favicon.png" : "/default-brand-logo.png";
+    return NextResponse.redirect(new URL(fallback, request.url), { headers: { "Cache-Control": "no-store" } });
+  }
 
   try {
     const object = await storage.client.send(new GetObjectCommand({ Bucket: storage.bucket, Key: key }));
@@ -23,11 +26,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ asse
     return new NextResponse(body, {
       headers: {
         "Content-Type": object.ContentType ?? "image/webp",
-        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Cache-Control": "no-store, max-age=0",
         ETag: object.ETag ?? `"${result.rows[0]?.updated_at?.getTime() ?? 0}"`,
       },
     });
   } catch {
-    return NextResponse.redirect(new URL("/icon.svg", request.url));
+    const fallback = asset === "favicon" ? "/default-favicon.png" : "/default-brand-logo.png";
+    return NextResponse.redirect(new URL(fallback, request.url), { headers: { "Cache-Control": "no-store" } });
   }
 }
