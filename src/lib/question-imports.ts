@@ -11,7 +11,7 @@ export async function listQuestionSets(user: AppUser) {
 }
 export async function getImport(user: AppUser, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const result=await getDatabase().query(`${folderTree} SELECT i.*,s.name,tree.path FROM imports i JOIN question_sets s ON s.id=i.set_id JOIN tree ON tree.id=s.folder_id WHERE i.id=$1 AND ($3::boolean OR i.created_by=$2 OR EXISTS (SELECT 1 FROM folder_permissions p WHERE p.folder_id=s.folder_id AND p.user_id=$2 AND p.can_view))`,[id,user.id,user.role==='admin']);
+  const result=await getDatabase().query(`${folderTree} SELECT i.*,s.name,tree.path FROM imports i JOIN question_sets s ON s.id=i.set_id JOIN tree ON tree.id=s.folder_id WHERE i.id=$1 AND ($3::boolean OR i.created_by=$2 OR EXISTS (SELECT 1 FROM folder_permissions p WHERE p.folder_id=s.folder_id AND p.user_id=$2 AND (p.can_view OR p.can_edit)))`,[id,user.id,user.role==='admin']);
   if (!result.rowCount) return null;
   const files=await getDatabase().query("SELECT id,source_path,status,failure_reason,asset_id FROM import_files WHERE import_id=$1 ORDER BY position",[id]);
   return {...result.rows[0], files:files.rows};

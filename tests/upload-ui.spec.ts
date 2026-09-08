@@ -41,7 +41,8 @@ test('folder upload preserves nested names, reviews, warns, and retries only fai
     await expect(page.getByRole('heading',{name:'Upload needs attention'})).toBeVisible();
     await expect(page.getByRole('status')).toContainText('1 of 2 images verified');
     await page.getByRole('button',{name:'Retry failed files'}).click();
-    await expect(page.getByRole('heading',{name:'Upload complete'})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'Upload needs attention'})).toBeVisible();
+    await expect(page.getByText('All selected valid images are uploaded and verified.')).toBeVisible();
     expect(created).toBe(1);expect(attempts).toEqual({'file-0':1,'file-1':2});
     await expect(page.getByRole('link',{name:'Review saved upload'})).toHaveAttribute('href','/admin/question-bank/imports/test-import');
   } finally {await rm(directory,{recursive:true,force:true});}
@@ -61,4 +62,34 @@ test('ZIP preview, destination validation, and backend failures remain actionabl
   await page.getByRole('button',{name:'Confirm and upload 1 images'}).click();
   await expect(page.getByText('R2 storage is not configured.')).toBeVisible();
   await expect(page.getByRole('button',{name:'Confirm and upload 1 images'})).toBeEnabled();
+});
+
+test('upload warns against leaving, keeps final result, and restores saved review after return', async ({ page }) => {
+  let release: () => void = () => undefined;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/question-imports', route => route.fulfill({json:{id:'last-upload',files:[{id:'file',source_path:'Question.png'}]}}));
+  await page.route('**/api/question-imports/last-upload/files/file', async route => {
+    await held;
+    await route.fulfill({json:{status:'succeeded',assetId:'image'}});
+  });
+  await page.route('**/api/question-assets/*', route => route.fulfill({contentType:'image/png',body:png}));
+  await page.route('**/api/question-imports/last-upload', route => route.fulfill({json:{id:'last-upload',source_name:'Practice',total_files:1,succeeded_files:1,failed_files:0,status:'completed'}}));
+  await page.goto('/');
+  await page.getByLabel('Images or ZIP').setInputFiles({name:'Question.png',mimeType:'image/png',buffer:png});
+  await page.getByLabel('Destination path, including set name').fill('Biology / Practice');
+  await page.getByRole('button',{name:'Continue to review'}).click();
+  await page.getByRole('button',{name:'Confirm and upload 1 images'}).click();
+  await expect(page.getByRole('heading',{name:'Please keep this page open'})).toBeVisible();
+  expect(await page.evaluate(() => {
+    const event = new Event('beforeunload', {cancelable:true}); window.dispatchEvent(event); return event.defaultPrevented;
+  })).toBe(true);
+  release();
+  await expect(page.getByRole('heading',{name:'Upload complete', exact:true})).toBeVisible();
+  await expect(page.getByText('It is now safe to leave this page.',{exact:false})).toBeVisible();
+  expect(await page.evaluate(() => {
+    const event = new Event('beforeunload', {cancelable:true}); window.dispatchEvent(event); return event.defaultPrevented;
+  })).toBe(false);
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'Your previous upload is complete'})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Review upload results'})).toHaveAttribute('href','/admin/question-bank/imports/last-upload');
 });

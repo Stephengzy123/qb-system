@@ -114,3 +114,11 @@ Apply migration `011_question_uploads.sql` using the existing migration command 
 Successful images and per-file failures are saved in the question bank and import history. Retry failed files from the original upload tab; retries are idempotent for completed files. Closing the tab releases the local files, so unfinished uploads cannot currently resume from a new tab. If R2 succeeds but the database write fails, the deterministic object key allows a retry to reuse that staging object.
 
 Verification: `npm run test:uploads` checks validation and simulated R2 read-back failures (Node 22.15+); `npm run test:uploads:ui` runs Chrome tests for folders, ZIPs, nested paths, review, and retry behavior using a local fixture with simulated API responses. These tests do not contact a live bucket. Live R2 verification was not run in this checkout because its environment is unconfigured.
+
+### Folder browsing and answer keys
+
+The question bank shows a folder tree, clickable path breadcrumbs, subfolders, and sets in the selected folder. Opening a set displays its question images and correct-choice controls. Staff with edit access can select or clear answers and save the answer key; viewers receive a read-only view. Answer keys are stored per set/question version with an audit entry, and stale edits are rejected rather than silently overwriting another editor's changes. Existing assignment grading keys remain independent.
+
+Migration `012_question_set_answers.sql` is required for the folder browser's answer counts and set editor. The existing Vercel build migration step applies it on deployment. `npm run test:question-bank` covers answer validation, authorization, save/clear behavior, and conflicting edits using a simulated database; the browser suite now also covers folder paths and answer editing.
+
+During upload and verification, a visible notice asks users to keep the page open. Refresh/close triggers the browser's leave warning, and same-tab link navigation asks before interrupting uploads. The final success or attention notice stays on the page, including skipped-file warnings. Returning to the upload page in the same tab provides a link to the latest saved upload and its server-recorded result. This does not make uploads run as background jobs.

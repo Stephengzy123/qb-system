@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import UploadReturnNotice, { LAST_UPLOAD_KEY } from "@/components/upload-return-notice";
 import { useEffect, useRef, useState } from "react";
 import { unzipSync } from "fflate";
 import { imageType, MAX_FILES, MAX_IMAGE_BYTES, pathParts, validSourcePath } from "@/lib/upload-validation";
@@ -20,6 +21,21 @@ export default function QuestionUpload({folders}:{folders:string[]}) {
   const [error,setError]=useState('');
   const [job,setJob]=useState<string>();
   const urls=useRef<string[]>([]);
+  const uploading = busy && step !== 'select';
+  useEffect(() => {
+    if (!uploading) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    const beforeNavigate = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest('a') : null;
+      if (!link || link.target === '_blank' || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      if (!window.confirm('Upload and verification are still running. Leaving this page stops remaining files. Leave anyway?')) {
+        event.preventDefault(); event.stopPropagation();
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('click', beforeNavigate, true);
+    return () => { window.removeEventListener('beforeunload', beforeUnload); document.removeEventListener('click', beforeNavigate, true); };
+  }, [uploading]);
   useEffect(()=>()=>urls.current.forEach(url=>URL.revokeObjectURL(url)),[]);
   async function selectFiles(files:File[]) {
     setBusy(true);setError('');
@@ -73,6 +89,7 @@ export default function QuestionUpload({folders}:{folders:string[]}) {
       if(!id) {
         const created=await jsonResponse(await fetch('/api/question-imports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,choiceCount:choices,files:items.filter(i=>!i.warning).map(i=>i.path)})}));
         id=created.id;setJob(id);
+        try { sessionStorage.setItem(LAST_UPLOAD_KEY, created.id); } catch { /* Uploads also work with browser storage disabled. */ }
         current=items.map(item=>({...item,id:created.files.find((f:{source_path:string;id:string})=>f.source_path===item.path)?.id}));
         setItems(current);
       }
@@ -93,6 +110,8 @@ export default function QuestionUpload({folders}:{folders:string[]}) {
   const failed=items.filter(i=>i.status==='failed').length;
   return <section className="panel question-upload">
     <ol className="upload-steps" aria-label="Upload progress"><li aria-current={step==='select'?'step':undefined}>1. Choose files & destination</li><li aria-current={step==='review'?'step':undefined}>2. Review</li><li aria-current={step==='results'?'step':undefined}>3. Upload results</li></ol>
+    {!job && step === 'select' && <UploadReturnNotice />}
+    {uploading && <div className="upload-notice attention"><h2>Please keep this page open</h2><p>Do not leave or refresh this page while your images are uploading and being verified. You can switch tabs and return here to see the result.</p><p>We will show a completion message or tell you what needs attention when every file has been checked.</p><progress aria-label="Upload progress" max={valid.length || 1} value={succeeded + failed} /></div>}
     {error && <p role="alert" className="upload-warning">{error}</p>}
     {step==='select' && <>
       <div className="upload-pickers"><label>Images or ZIP<input type="file" multiple accept="image/png,image/jpeg,image/webp,.zip" disabled={busy} onChange={e=>{void selectFiles(Array.from(e.target.files??[]));e.target.value='';}} /></label><label>Folder (includes subfolders)<input type="file" multiple {...{webkitdirectory:""}} disabled={busy} onChange={e=>{void selectFiles(Array.from(e.target.files??[]));e.target.value='';}} /></label></div>
@@ -104,7 +123,14 @@ export default function QuestionUpload({folders}:{folders:string[]}) {
       <button className="primary-button" disabled={busy||!valid.length} onClick={review}>{busy?'Reading files…':'Continue to review'}</button>
     </>}
     {step==='review' && <><h2>Review {valid.length} images</h2><p><strong>{pathParts(path).join(' / ')}</strong> · {choices} choices per question · Saved as a draft</p><p>Check the images and order below. Files with warnings will be skipped.</p><div className="empty-actions"><button className="secondary-button" disabled={busy} onClick={()=>setStep('select')}>Back</button><button className="primary-button" disabled={busy||!valid.length} onClick={()=>void upload()}>{busy?'Starting…':`Confirm and upload ${valid.length} images`}</button></div></>}
-    {step==='results' && <><h2>{busy?'Uploading and verifying…':failed?'Upload needs attention':'Upload complete'}</h2><p role="status">{succeeded} of {valid.length} images verified in R2. {failed>0?`${failed} failed.`:''} {items.length-valid.length>0?`${items.length-valid.length} skipped.`:''}</p><div className="empty-actions">{failed>0 && <button className="primary-button" disabled={busy} onClick={()=>void upload()}>Retry failed files</button>}{job && !busy && <Link className="secondary-button" href={`/admin/question-bank/imports/${job}`}>Review saved upload</Link>}<Link className="secondary-button" href="/admin/question-bank">Go to question bank</Link></div></>}
+    {step==='results' && <>
+      <div className={`upload-notice ${busy ? '' : failed || succeeded < valid.length || items.some(item => item.warning) ? 'attention' : 'complete'}`}>
+        <h2>{busy ? 'Uploading and verifying…' : failed || succeeded < valid.length || items.some(item => item.warning) ? 'Upload needs attention' : 'Upload complete'}</h2>
+        <p role="status">{succeeded} of {valid.length} images verified in R2. {failed>0?`${failed} failed.`:''} {items.length-valid.length>0?`${items.length-valid.length} skipped.`:''}</p>
+        {!busy && <p>{failed || succeeded < valid.length ? 'Processing has finished. Review the failures below and retry failed files before leaving.' : items.some(item => item.warning) ? 'All selected valid images are uploaded and verified. Review the skipped-file warnings below. It is now safe to leave this page.' : 'All images are uploaded and verified. It is now safe to leave this page.'} This result stays here when you switch tabs and return.</p>}
+      </div>
+      <div className="empty-actions">{failed>0 && <button className="primary-button" disabled={busy} onClick={()=>void upload()}>Retry failed files</button>}{job && !busy && <Link className="secondary-button" href={`/admin/question-bank/imports/${job}`}>Review saved upload</Link>}{!busy && <Link className="secondary-button" href="/admin/question-bank">Go to question bank</Link>}</div>
+    </>}
     {items.length>0 && <div className="upload-review-grid">{items.map((item,index)=><article className="upload-review-card" key={`${item.path}-${index}`}>
       {item.preview && <a href={item.assetId?`/api/question-assets/${item.assetId}`:item.preview} target="_blank" rel="noreferrer"><img src={item.assetId?`/api/question-assets/${item.assetId}`:item.preview} alt={`Preview of ${item.path}`} loading="lazy" /></a>}
       <strong>{item.path}</strong><small>{(item.file.size/1024).toFixed(1)} KB</small>
