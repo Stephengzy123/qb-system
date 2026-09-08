@@ -14,4 +14,4 @@ export function markChoice(selected:string|null,key:string|null):boolean|null {r
 export function accuracy(correct:number,graded:number) {return graded>0?`${Math.round(correct/graded*100)}%`:'Not graded';}
 export type ResultQuestion={id:string;name:string;position:number;asset_id:string|null;selected_label:string|null;correct_label:string|null;is_correct:boolean|null};
 export type StudentResult={student_id:string;student_name:string;status:string;correct:number;graded:number;total:number;submitted_at:Date|null;questions:ResultQuestion[]};
-export type HistoryItem={id:string;title:string;class_name:string;status:string;assignment_status:string;correct:number;graded:number;total:number;submitted_at:Date|null;due_at:Date|null};
+export type HistoryItem={practice_student_id?:string|null;id:string;title:string;class_name:string;status:string;assignment_status:string;correct:number;graded:number;total:number;submitted_at:Date|null;due_at:Date|null};

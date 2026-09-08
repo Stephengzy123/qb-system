@@ -15,14 +15,14 @@ test('student selects MCQ, saves, reloads and submits to see overall and questio
   await expect(page.getByRole('status')).toContainText('Saved to cloud');
   await page.reload();
   await expect(page.getByRole('group',{name:'Your choice for question 1'}).getByRole('radio',{name:'A',exact:true})).toBeChecked();
-  await page.getByRole('button',{name:'Submit assignment'}).click();
+  await page.getByRole('button',{name:'Submit answers'}).click();
   await expect(page.getByRole('region',{name:'Confirm submission'})).toContainText('2 questions are unanswered');
   await page.getByRole('button',{name:'Confirm submission'}).click();
   await expect(page.getByRole('heading',{name:'Alex — Results'})).toBeVisible();
   await expect(page.getByText('50%',{exact:true})).toBeVisible();
   await expect(page.getByRole('cell',{name:'Incorrect',exact:true})).toBeVisible();
   await expect(page.getByRole('cell',{name:'Ungraded',exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Submit assignment'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Submit answers'})).toHaveCount(0);
   expect(requests.map(r=>r.action)).toEqual(['save','submit']);expect(requests[1].revision).toBe(1);
 });
 test('failed save keeps selected answers and does not report submission',async({page})=>{
@@ -31,7 +31,7 @@ test('failed save keeps selected answers and does not report submission',async({
   const answer=page.getByRole('group',{name:'Your choice for question 1'}).getByRole('radio',{name:'B',exact:true});
   await answer.check();await page.getByRole('button',{name:'Save to cloud',exact:true}).click();
   await expect(page.getByRole('alert').filter({hasText:'Your work changed'})).toBeVisible();await expect(answer).toBeChecked();
-  await expect(page.getByRole('button',{name:'Submit assignment'})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Submit answers'})).toBeEnabled();
 });
 test('class report and completed history link to individual and per-question results',async({page})=>{
   await page.goto('/results-demo');
@@ -39,7 +39,7 @@ test('class report and completed history link to individual and per-question res
   await expect(page.getByText('1 of 2 students submitted')).toBeVisible();
   await expect(page.getByRole('link',{name:'Alex (@alex)'})).toHaveAttribute('href',`/admin/assignments/${id(90)}/students/${id(50)}`);
   await expect(page.getByRole('heading',{name:'By question'})).toBeVisible();
-  await expect(page.getByRole('heading',{name:'Completed assignments'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Completed work'})).toBeVisible();
   await expect(page.getByRole('link',{name:'Biology practice'})).toHaveAttribute('href',`/student/assignments/${id(90)}`);
   await page.getByRole('link',{name:'Question 2',exact:true}).click();
   await expect(page).toHaveURL(new RegExp(`#question-${id(2)}$`));
@@ -63,11 +63,11 @@ test('admin can find a duplicate, disable it with confirmation and restore it',a
   await expect(page.getByRole('button',{name:'Disable account',exact:true})).toBeVisible();
   expect(changes).toEqual([{disabled:true,duplicateOf:id(51)},{disabled:false,duplicateOf:null}]);
 });
-test('Students navigation is admin-only',async({page})=>{
+test('Students navigation is available to staff',async({page})=>{
   await page.goto('/navigation-demo?role=admin');
   await expect(page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Students'})).toBeVisible();
   await page.goto('/navigation-demo?role=teacher');
-  await expect(page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Students'})).toHaveCount(0);
+  await expect(page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Students'})).toBeVisible();
 });
 
 test('answer actions autosave locally without a request and survive reload',async({page})=>{
@@ -95,7 +95,7 @@ test('cloud save has a persisted countdown while submission stays available',asy
   await expect(page.getByRole('status')).toContainText('Saved to cloud');
   await page.getByRole('group',{name:'Your choice for question 2'}).getByRole('radio',{name:'B',exact:true}).check();
   await expect(page.getByRole('button',{name:/Save to cloud \(/})).toBeDisabled();
-  await expect(page.getByRole('button',{name:'Submit assignment'})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Submit answers'})).toBeEnabled();
   await page.reload();await expect(page.getByRole('button',{name:/Save to cloud \(/})).toBeDisabled();
   await page.clock.fastForward(31000);
   await expect(page.getByRole('button',{name:'Save to cloud',exact:true})).toBeEnabled();
@@ -116,7 +116,7 @@ test('newer cloud work is not silently overwritten by an older local draft',asyn
   await context.addCookies([{name:'test-work',value:encodeURIComponent(JSON.stringify(cloud)),url:'http://127.0.0.1:3105'}]);
   await page.reload();
   await expect(page.getByRole('region',{name:'Resolve local draft'})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Submit assignment'})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'Submit answers'})).toBeDisabled();
   await page.getByRole('button',{name:'Use local answers'}).click();
   await expect(page.getByRole('group',{name:'Your choice for question 1'}).getByRole('radio',{name:'B',exact:true})).toBeChecked();
   await expect(page.getByRole('button',{name:'Save to cloud',exact:true})).toBeEnabled();
@@ -125,7 +125,7 @@ test('newer cloud work is not silently overwritten by an older local draft',asyn
 for(const width of [1280,390])test(`submission confirmation stays on screen while scrolling at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:720});
   await page.goto('/learn');
-  await page.getByRole('button',{name:'Submit assignment'}).click();
+  await page.getByRole('button',{name:'Submit answers'}).click();
   await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
   const button=page.getByRole('button',{name:'Confirm submission',exact:true});
   await expect(button).toBeInViewport({ratio:1});

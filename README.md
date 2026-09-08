@@ -51,7 +51,7 @@ Next.js automatically loads `.env.local` on the local server. These values remai
 
 ## Deployment
 
-The application is a standard Next.js App Router project intended for Vercel. External services will be configured with Vercel environment variables rather than committed credentials.
+The application is a standard Next.js App Router project intended for Vercel. External services will be configured with Vercel environment variables rather than committed credentials. `vercel.json` explicitly sets the cloud build to `npm run vercel-build`, which applies pending database migrations before building Next.js. The migration runner uses the cloud environment’s `DATABASE_URL`, skips already-applied migrations, and stops the deployment if a migration fails.
 
 ## Environment variables
 
@@ -141,3 +141,11 @@ Assignment links in class details and the staff assignment list open a report wi
 The admin-only Students tab supports account search, current/past assignment histories, overall and per-question results, disabling/restoring accounts, and linking disabled duplicate accounts to an active retained account. Linking does not merge or delete work. Disabling revokes database sessions and is enforced by the app-user check even when an authentication cookie is cached. Administrative actions are audited.
 
 Migration `014_student_results.sql` adds duplicate-account links and reporting indexes. Migration `015_cloud_save_cooldown.sql` adds the timestamp used to enforce cloud-save cooldowns. The existing Vercel build migration step applies both. `npm run test:learning` covers grading, authorization, conflict handling, submission replay, and account management with simulated database responses. The browser suite covers saving/reloading/submitting answers, results navigation, completed history, admin navigation, and disable/restore with simulated APIs. Live database and R2 verification remain outside these local checks.
+
+### Error practice and completed work
+
+Students can start personal error practice from their workspace, choosing any integer from 5 to 50. Selection uses submitted incorrect answers (including previous practice), weighted by error count and recency, without repeated question versions in a session. Each error has baseline weight 1 plus a recency bonus of 3 that halves every 14 days. If fewer questions are available, all available questions are used. Sessions snapshot their questions and grading keys, save through the existing work flow, and appear in Completed work after submission. Practice is excluded from class assignment lists and counts. Administrators and the student's active teachers can review practice through Students → student → Completed work; teachers' regular assignment history remains limited to their classes.
+
+Staff can close an open assignment with no due date from its assignment page. Saves and submissions are blocked after closing; prior submissions remain readable. Admin appearance controls are temporary and stored only in that browser, with solid/gradient colors, angle, corner radius, and reset.
+
+Apply `database/016_error_practice.sql` through `npm run db:migrate` with `DATABASE_URL` configured before running this version. The deployment build already runs migrations. Run `npm run test:error-practice` for selection, creation, retries and closing tests; `npx playwright test` covers browser interactions and responsive layouts.

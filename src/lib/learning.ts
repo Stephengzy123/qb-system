@@ -1,3 +1,4 @@
+import { assignmentReadAccess } from '@/lib/assignment-access';
 import { CLOUD_SAVE_COOLDOWN_SECONDS } from '@/lib/local-work';
 import { getDatabase,type AppUser } from '@/lib/app-user';
 import { isUuid } from '@/lib/question-bank-model';
@@ -5,7 +6,7 @@ import type { HistoryItem,ResultQuestion,StudentResult } from '@/lib/learning-mo
 
 export async function canManageAssignment(user:AppUser,assignmentId:string) {
   if(user.role==='student' || !isUuid(assignmentId)) return false;
-  return Boolean((await getDatabase().query(`SELECT 1 FROM assignments a WHERE a.id=$1 AND ($3::boolean OR EXISTS(SELECT 1 FROM class_memberships cm WHERE cm.class_id=a.class_id AND cm.user_id=$2 AND cm.role='teacher' AND cm.status='active'))`,[assignmentId,user.id,user.role==='admin'])).rowCount);
+  return Boolean((await getDatabase().query(`SELECT 1 FROM assignments a LEFT JOIN classes c ON c.id=a.class_id WHERE a.id=$1 AND ${assignmentReadAccess('$2','$3')}`,[assignmentId,user.id,user.role==='admin'])).rowCount);
 }
 export async function getSavedWork(studentId:string,assignmentId:string) {
   const database=getDatabase();
@@ -13,14 +14,14 @@ export async function getSavedWork(studentId:string,assignmentId:string) {
   const answers=attempt?(await database.query<{question_id:string;choice_id:string|null}>(`SELECT assignment_question_id AS question_id,selected_choice_id AS choice_id FROM responses WHERE student_assignment_id=$1`,[attempt.id])).rows:[];
   return {status:attempt?.status??'not_started',revision:attempt?.revision??0,answers,cooldownSeconds:attempt?.retry_after??0};
 }
-export async function studentHistory(studentId:string) {
-  return (await getDatabase().query<HistoryItem>(`SELECT a.id,a.title,c.name AS class_name,a.status AS assignment_status,COALESCE(sa.status::text,'not_started') AS status,sa.submitted_at,a.due_at,
+export async function studentHistory(studentId:string,viewer?:AppUser) {
+  return (await getDatabase().query<HistoryItem>(`SELECT a.id,a.practice_student_id,a.title,COALESCE(c.name,'Personal practice') AS class_name,a.status AS assignment_status,COALESCE(sa.status::text,'not_started') AS status,sa.submitted_at,a.due_at,
     (SELECT count(*)::int FROM assignment_questions WHERE assignment_id=a.id) AS total,
     (SELECT count(*)::int FROM responses r WHERE r.student_assignment_id=sa.id AND r.is_correct=true AND sa.status='submitted') AS correct,
     (SELECT count(*)::int FROM responses r WHERE r.student_assignment_id=sa.id AND r.is_correct IS NOT NULL AND sa.status='submitted') AS graded
-    FROM assignments a JOIN classes c ON c.id=a.class_id LEFT JOIN student_assignments sa ON sa.assignment_id=a.id AND sa.student_id=$1
-    WHERE sa.id IS NOT NULL OR (a.status<>'draft' AND c.archived_at IS NULL AND EXISTS(SELECT 1 FROM class_memberships cm WHERE cm.class_id=c.id AND cm.user_id=$1 AND cm.role='student' AND cm.status='active'))
-    ORDER BY sa.submitted_at DESC NULLS LAST,a.created_at DESC`,[studentId])).rows;
+    FROM assignments a LEFT JOIN classes c ON c.id=a.class_id LEFT JOIN student_assignments sa ON sa.assignment_id=a.id AND sa.student_id=$1
+    WHERE (${assignmentReadAccess('$2','$3')}) AND (sa.id IS NOT NULL OR (a.practice_student_id IS NULL AND a.status<>'draft' AND c.archived_at IS NULL AND EXISTS(SELECT 1 FROM class_memberships cm WHERE cm.class_id=c.id AND cm.user_id=$1 AND cm.role='student' AND cm.status='active')))
+    ORDER BY sa.submitted_at DESC NULLS LAST,a.created_at DESC`,[studentId,viewer?.id??studentId,viewer?.role==='admin'])).rows;
 }
 export async function getStudentResult(user:AppUser,assignmentId:string,studentId:string):Promise<StudentResult|null> {
   if(!isUuid(assignmentId)||!isUuid(studentId)) return null;

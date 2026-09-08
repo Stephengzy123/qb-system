@@ -12,10 +12,12 @@ export async function POST(request:Request,{params}:{params:Promise<{assignmentI
   const client=await getDatabase().connect();
   try {
     await client.query('BEGIN');
-    const assignment=(await client.query<{due_at:Date|null}>(`SELECT a.due_at FROM assignments a JOIN classes c ON c.id=a.class_id
-      JOIN class_memberships cm ON cm.class_id=c.id AND cm.user_id=$2 AND cm.role='student' AND cm.status='active'
-      WHERE a.id=$1 AND a.status='open' AND c.archived_at IS NULL AND (a.open_at IS NULL OR a.open_at<=now()) FOR SHARE OF a,c,cm`,[assignmentId,user.id])).rows[0];
+    const assignment=(await client.query<{due_at:Date|null;practice_student_id:string|null;class_id:string}>(`SELECT a.due_at,a.practice_student_id,a.class_id FROM assignments a WHERE a.id=$1 AND a.status='open' AND (a.open_at IS NULL OR a.open_at<=now()) AND (a.practice_student_id=$2 OR (a.practice_student_id IS NULL AND EXISTS(SELECT 1 FROM classes c JOIN class_memberships cm ON cm.class_id=c.id WHERE c.id=a.class_id AND c.archived_at IS NULL AND cm.user_id=$2 AND cm.role='student' AND cm.status='active'))) FOR SHARE OF a`,[assignmentId,user.id])).rows[0];
     if(!assignment) {await client.query('ROLLBACK');return Response.json({error:'This assignment is not open to you.'},{status:403});}
+    if(assignment.class_id) {
+      const membership=await client.query(`SELECT 1 FROM classes c JOIN class_memberships cm ON cm.class_id=c.id WHERE c.id=$1 AND c.archived_at IS NULL AND cm.user_id=$2 AND cm.role='student' AND cm.status='active' FOR SHARE OF c,cm`,[assignment.class_id,user.id]);
+      if(!membership.rowCount) {await client.query('ROLLBACK');return Response.json({error:'This assignment is not open to you.'},{status:403});}
+    }
     await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`${user.id}:${assignmentId}`]);
     let attempt=(await client.query<{id:string;status:string;revision:number;retry_after:number}>(`SELECT id,status,revision,
       GREATEST(0,CEIL(EXTRACT(EPOCH FROM (cloud_saved_at + $3 * interval '1 second' - clock_timestamp()))))::int AS retry_after

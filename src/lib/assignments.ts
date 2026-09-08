@@ -29,7 +29,7 @@ export async function listAssignments(user:AppUser, classId:string|null=null) {
 export async function getAssignment(user:AppUser,id:string) {
   if (!isUuid(id)) return null;
   const database=getDatabase();
-  const result=await database.query<{id:string;title:string;instructions:string|null;class_name:string;status:string;due_at:Date|null}>(`SELECT a.id,a.title,a.instructions,c.name AS class_name,a.status,a.due_at FROM assignments a JOIN classes c ON c.id=a.class_id
+  const result=await database.query<{id:string;title:string;instructions:string|null;class_name:string;status:string;due_at:Date|null;practice_student_id:string|null}>(`SELECT a.id,a.title,a.instructions,COALESCE(c.name,'Personal practice') AS class_name,a.status,a.due_at,a.practice_student_id FROM assignments a LEFT JOIN classes c ON c.id=a.class_id
     WHERE a.id=$1 AND ${assignmentReadAccess('$2','$3')}`,[id,user.id,user.role==='admin']);
   if (!result.rowCount) return null;
   const questions=await database.query<{id:string;version_id:string;name:string;asset_id:string|null;choices:{id:string;label:string}[]}>(`SELECT aq.id,aq.question_version_id AS version_id,COALESCE(v.alt_text,'Question '||(aq.position+1)) AS name,

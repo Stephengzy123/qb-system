@@ -1,5 +1,6 @@
 "use client";
 
+import AdminAppearance from "@/components/admin-appearance";
 import Link from "next/link";
 import { type ReactNode } from "react";
 import SignOutButton from "@/components/sign-out-button";
@@ -57,7 +58,7 @@ export default function Workspace({ view, user, organizationName, summary, child
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><BrandMark /><span><strong>Question Bank</strong><small>{organizationName}</small></span></div>
-      <nav aria-label="Main navigation">{navItems.filter(item => item.id !== "students" || user.role === "admin").map((item) => <Link key={item.id} href={item.href} className={view === item.id ? "active" : ""}><span className="nav-icon">{item.icon}</span>{item.label}</Link>)}</nav>
+      <nav aria-label="Main navigation">{navItems.map((item) => <Link key={item.id} href={item.href} className={view === item.id ? "active" : ""}><span className="nav-icon">{item.icon}</span>{item.label}</Link>)}</nav>
       <div className="sidebar-bottom">
         <Link href="/student"><span className="nav-icon">◇</span>Student view</Link>
         <Link className={view === "audit" ? "active" : ""} href="/admin/audit-logs"><span className="nav-icon">⌁</span>Audit logs</Link>
@@ -68,7 +69,8 @@ export default function Workspace({ view, user, organizationName, summary, child
       </div>
     </aside>
     <main className="main-content">
-      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.filter(item => item.id !== "students" || user.role === "admin").map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
+      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
+      {user.role === "admin" && <AdminAppearance />}
       {children ?? <>{view === "overview" && <Overview name={user.displayName} organizationName={organizationName} summary={summary ?? { questions: 0, assignments: 0, students: 0, needsAttention: 0 }} />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}
     </main>
   </div>;

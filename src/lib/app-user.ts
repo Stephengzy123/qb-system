@@ -117,7 +117,7 @@ export async function getStaffSummary(user: AppUser): Promise<StaffSummary> {
       (SELECT count(*)::int FROM questions q
         WHERE q.deleted_at IS NULL AND ($2::boolean OR q.created_by = $1)) AS questions,
       (SELECT count(*)::int FROM assignments a
-        WHERE $2::boolean OR a.created_by = $1) AS assignments,
+        WHERE a.practice_student_id IS NULL AND ($2::boolean OR a.created_by = $1)) AS assignments,
       (SELECT count(DISTINCT cm.user_id)::int
          FROM class_memberships cm
          JOIN classes c ON c.id = cm.class_id

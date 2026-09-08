@@ -13,6 +13,7 @@
     "test:uploads:ui": "playwright test",
     "test:question-bank": "node --import ./tests/register.mjs --test tests/question-bank.test.mjs",
     "test:assignments": "node --import ./tests/register.mjs --test tests/assignments.test.mjs",
+    "test:error-practice": "node --import ./tests/register.mjs --test tests/error-practice.test.mjs",
     "test:learning": "node --import ./tests/register.mjs --test tests/learning.test.mjs"
   },
   "dependencies": {

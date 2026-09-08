@@ -10,7 +10,7 @@ export async function GET(_request:Request,{params}:{params:Promise<{assignmentI
   if(!isUuid(assignmentId)||!isUuid(assetId)) return new Response(null,{status:404});
   const asset=(await getDatabase().query<{storage_key:string;mime_type:string}>(`SELECT asset.storage_key,asset.mime_type FROM assets asset
     JOIN assignment_questions aq ON aq.question_version_id=asset.question_version_id
-    JOIN assignments a ON a.id=aq.assignment_id JOIN classes c ON c.id=a.class_id
+    JOIN assignments a ON a.id=aq.assignment_id LEFT JOIN classes c ON c.id=a.class_id
     WHERE asset.id=$1 AND a.id=$2 AND asset.status='active' AND ${assignmentReadAccess('$3','$4')}`,[assetId,assignmentId,user.id,user.role==='admin'])).rows[0];
   if(!asset) return new Response(null,{status:404});
   const storage=getBrandingStorage();
