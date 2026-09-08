@@ -1,28 +1,50 @@
 "use client";
-import {useEffect,useState} from 'react';
-const defaults={start:'#f5f7fb',end:'#e1e9fa',angle:135,style:'gradient',radius:12};
+import {useState,useSyncExternalStore,type CSSProperties,type ReactNode} from 'react';
+const defaults={start:'#f5f7fb',end:'#e1e9fa',angle:135,style:'gradient',radius:12,sidebar:'#111c36',sidebarText:'#d7dff4',primary:'#496be0',secondary:'#ffffff',accent:'#855dd2'};
 const key='qb-admin-appearance';
-function valid(value:unknown):value is typeof defaults {
-  const v=value as typeof defaults|null;
-  return !!v && /^#[0-9a-f]{6}$/i.test(v.start) && /^#[0-9a-f]{6}$/i.test(v.end) && Number.isFinite(v.angle) && v.angle>=0 && v.angle<=360 && Number.isFinite(v.radius) && v.radius>=0 && v.radius<=28 && ['gradient','solid'].includes(v.style);
+const changeEvent='qb-admin-appearance-change';
+let unsaved:string|null|undefined;
+function subscribe(onChange:()=>void) {
+  const sync=()=>{unsaved=undefined;onChange();};
+  window.addEventListener(changeEvent,onChange);window.addEventListener('storage',sync);
+  return()=>{window.removeEventListener(changeEvent,onChange);window.removeEventListener('storage',sync);};
+}
+function snapshot(){if(unsaved!==undefined)return unsaved;try{return localStorage.getItem(key);}catch{return null;}}
+function parse(raw:string|null):typeof defaults|null {
+  try {
+    if(!raw)return null;
+    // Preserve existing gradient settings when upgrading older saved palettes.
+    const value={...defaults,...JSON.parse(raw)};
+    if(!['start','end','sidebar','sidebarText','primary','secondary','accent'].every(k=>/^#[0-9a-f]{6}$/i.test(value[k])))return null;
+    if(!Number.isFinite(value.angle)||value.angle<0||value.angle>360||!Number.isFinite(value.radius)||value.radius<0||value.radius>28||!['gradient','solid'].includes(value.style))return null;
+    return value;
+  }catch{return null;}
+}
+function useAppearance(){return parse(useSyncExternalStore(subscribe,snapshot,()=>null));}
+function save(value:typeof defaults|null){
+  const raw=value?JSON.stringify(value):null;let persisted=true;
+  try{if(raw)localStorage.setItem(key,raw);else localStorage.removeItem(key);unsaved=undefined;}catch{unsaved=raw;persisted=false;}
+  window.dispatchEvent(new Event(changeEvent));return persisted;
+}
+function foreground(hex:string){
+  const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);
+  return rgb[0]*0.2126+rgb[1]*0.7152+rgb[2]*0.0722>0.179?'#111111':'#ffffff';
+}
+export function AppearanceShell({admin,children}:{admin:boolean;children:ReactNode}) {
+  const saved=useAppearance();const value=admin?saved:null;
+  const style=value?{
+    background:value.style==='solid'?value.start:`linear-gradient(${value.angle}deg,${value.start},${value.end})`,
+    '--admin-radius':`${value.radius}px`,'--admin-sidebar':value.sidebar,'--admin-sidebar-text':value.sidebarText,
+    '--blue':value.primary,'--blue-dark':`color-mix(in srgb,${value.primary} 85%,black)`,
+    '--admin-primary-text':foreground(value.primary),'--admin-secondary':value.secondary,'--admin-secondary-text':foreground(value.secondary),
+    '--admin-accent':value.accent,'--admin-accent-text':foreground(value.accent),'--violet':value.accent,
+  } as CSSProperties:undefined;
+  return <div className="app-shell" data-admin-appearance={value?'custom':undefined} style={style}>{children}</div>;
 }
 export default function AdminAppearance() {
-  const [settings,setSettings]=useState(defaults);const [enabled,setEnabled]=useState(false);const [message,setMessage]=useState('');
-  useEffect(()=>{
-    const shell=document.querySelector<HTMLElement>('.app-shell');
-    try {const saved=JSON.parse(localStorage.getItem(key)??'null');if(valid(saved)) apply(saved);}catch{/* Default appearance when storage is unavailable. */}
-    function apply(value:typeof defaults){if(!shell)return;shell.style.background=value.style==='solid'?value.start:`linear-gradient(${value.angle}deg,${value.start},${value.end})`;shell.style.setProperty('--admin-radius',`${value.radius}px`);}
-    return()=>{if(shell){shell.style.background='';shell.style.removeProperty('--admin-radius');}};
-  },[]);
-  function update(next:typeof defaults) {
-    setSettings(next);setEnabled(true);
-    const shell=document.querySelector<HTMLElement>('.app-shell');
-    if(shell){shell.style.background=next.style==='solid'?next.start:`linear-gradient(${next.angle}deg,${next.start},${next.end})`;shell.style.setProperty('--admin-radius',`${next.radius}px`);}
-    try{localStorage.setItem(key,JSON.stringify(next));setMessage('Saved in this browser.');}catch{setMessage('Applied for this page. Browser storage is unavailable.');}
-  }
-  function open() {
-    try{const saved=JSON.parse(localStorage.getItem(key)??'null');if(valid(saved)){setSettings(saved);setEnabled(true);}}catch{/* Defaults remain editable. */}
-  }
-  function reset(){const shell=document.querySelector<HTMLElement>('.app-shell');if(shell){shell.style.background='';shell.style.removeProperty('--admin-radius');}setSettings(defaults);setEnabled(false);try{localStorage.removeItem(key);setMessage('Default appearance restored.');}catch{setMessage('Default restored for this page.');}}
-  return <details className="panel admin-appearance" onToggle={event=>{if(event.currentTarget.open)open();}}><summary>Admin appearance (temporary)</summary><p>Customize your admin workspace in this browser.</p><div className="appearance-fields"><label>Background style<select value={settings.style} onChange={e=>update({...settings,style:e.target.value})}><option value="gradient">Gradient</option><option value="solid">Solid</option></select></label><label>Start color<input type="color" value={settings.start} onChange={e=>update({...settings,start:e.target.value})} /></label><label>End color<input type="color" disabled={settings.style==='solid'} value={settings.end} onChange={e=>update({...settings,end:e.target.value})} /></label><label>Gradient angle: {settings.angle}°<input type="range" min="0" max="360" value={settings.angle} disabled={settings.style==='solid'} onChange={e=>update({...settings,angle:Number(e.target.value)})} /></label><label>Corner radius: {settings.radius}px<input type="range" min="0" max="28" value={settings.radius} onChange={e=>update({...settings,radius:Number(e.target.value)})} /></label></div><button className="secondary-button" onClick={reset}>Reset appearance</button><p role="status">{message || (enabled?'Custom appearance enabled.':'Default appearance.')}</p></details>;
+  const saved=useAppearance();const settings=saved??defaults;const [message,setMessage]=useState('');
+  function update(next:typeof defaults){setMessage(save(next)?'Saved in this browser.':'Applied for this session. Browser storage is unavailable.');}
+  function reset(){setMessage(save(null)?'Default appearance restored.':'Default restored for this session.');}
+  const colors=[['start','Start color'],['end','End color'],['sidebar','Sidebar background'],['sidebarText','Sidebar text'],['primary','Primary color'],['secondary','Secondary color'],['accent','Accent color']] as const;
+  return <details className="panel admin-appearance"><summary>Admin appearance (temporary)</summary><p>Experiment with your admin palette. Changes apply across admin pages in this browser.</p><div className="appearance-fields"><label>Background style<select value={settings.style} onChange={e=>update({...settings,style:e.target.value})}><option value="gradient">Gradient</option><option value="solid">Solid</option></select></label>{colors.map(([field,label])=><label key={field}>{label}<input type="color" aria-label={label} value={settings[field]} disabled={field==='end'&&settings.style==='solid'} onChange={e=>update({...settings,[field]:e.target.value})} /><small>{settings[field]}</small></label>)}<label>Gradient angle: {settings.angle}°<input type="range" min="0" max="360" value={settings.angle} disabled={settings.style==='solid'} onChange={e=>update({...settings,angle:Number(e.target.value)})} /></label><label>Corner radius: {settings.radius}px<input type="range" min="0" max="28" value={settings.radius} onChange={e=>update({...settings,radius:Number(e.target.value)})} /></label></div><div className="appearance-preview"><button className="primary-button" type="button">Primary preview</button><button className="secondary-button" type="button">Secondary preview</button><span className="appearance-accent">Accent preview</span></div><button className="secondary-button" onClick={reset}>Reset appearance</button><p role="status">{message || (saved?'Custom appearance enabled.':'Default appearance.')}</p></details>;
 }
