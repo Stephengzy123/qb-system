@@ -7,6 +7,7 @@ import ThemeToggle from "@/components/theme-toggle";
 import { getStudentAssignments, requireAppUser } from "@/lib/app-user";
 import { getClassPreviewAssignments, listClasses } from "@/lib/classes";
 import { getOrganizationName } from "@/lib/organization";
+import BrandMark from "@/components/brand-mark";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
 
   return <div className="student-shell">
     <header className="student-header">
-      <div className="student-brand"><div className="mark"><span>Q</span></div><span><strong>{organizationName}</strong><small>Student workspace</small></span></div>
+      <div className="student-brand"><BrandMark /><span><strong>{organizationName}</strong><small>Student workspace</small></span></div>
       <div className="student-account"><ThemeToggle />{isPreview ? <Link className="secondary-button student-exit" href="/admin/dashboard">← Exit student view</Link> : <Link className="secondary-button student-exit" href="/student/account">Account</Link>}<span>{user.displayName}</span><SignOutButton /></div>
     </header>
     {isPreview && <div className="preview-banner"><strong>Student view preview</strong><ClassPreviewSelector classes={classes} selectedId={selectedClass?.id ?? ""} /><span>{selectedClass ? `Viewing ${selectedClass.name} as a new student.` : "Select a class to begin."}</span><Link href="/admin/dashboard">Exit preview</Link></div>}

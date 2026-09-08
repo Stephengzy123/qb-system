@@ -5,6 +5,7 @@ import { type ReactNode } from "react";
 import SignOutButton from "@/components/sign-out-button";
 import ThemeToggle from "@/components/theme-toggle";
 import type { StaffSummary } from "@/lib/app-user";
+import BrandMark from "@/components/brand-mark";
 
 export type View = "overview" | "library" | "classes" | "assignments" | "audit" | "account";
 
@@ -14,10 +15,6 @@ const navItems: { id: Exclude<View, "audit" | "account">; label: string; icon: s
   { id: "classes", label: "Classes", icon: "◉", href: "/admin/classes" },
   { id: "assignments", label: "Assignments", icon: "✓", href: "/admin/assignments" },
 ];
-
-function Mark() {
-  return <div className="mark" aria-hidden="true"><span>Q</span></div>;
-}
 
 function ProductEmpty({ icon, title, body, action, href }: { icon: string; title: string; body: string; action?: string; href?: string }) {
   return <div className="empty-state product-empty"><span>{icon}</span><h2>{title}</h2><p>{body}</p>{action && href && <Link className="primary-button" href={href}>{action}</Link>}</div>;
@@ -58,7 +55,7 @@ export default function Workspace({ view, user, organizationName, summary, child
   const initials = user.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   return <div className="app-shell">
     <aside className="sidebar">
-      <div className="brand"><Mark /><span><strong>Question Bank</strong><small>{organizationName}</small></span></div>
+      <div className="brand"><BrandMark /><span><strong>Question Bank</strong><small>{organizationName}</small></span></div>
       <nav aria-label="Main navigation">{navItems.map((item) => <Link key={item.id} href={item.href} className={view === item.id ? "active" : ""}><span className="nav-icon">{item.icon}</span>{item.label}</Link>)}</nav>
       <div className="sidebar-bottom">
         <Link href="/student"><span className="nav-icon">◇</span>Student view</Link>
@@ -70,7 +67,7 @@ export default function Workspace({ view, user, organizationName, summary, child
       </div>
     </aside>
     <main className="main-content">
-      <div className="mobile-bar"><div className="brand"><Mark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
+      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
       {children ?? <>{view === "overview" && <Overview name={user.displayName} organizationName={organizationName} summary={summary ?? { questions: 0, assignments: 0, students: 0, needsAttention: 0 }} />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}
     </main>
   </div>;

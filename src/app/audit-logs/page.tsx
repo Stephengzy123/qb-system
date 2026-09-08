@@ -27,6 +27,8 @@ const actionLabels: Record<string, string> = {
   class_archived: "Deleted class",
   class_code_rotated: "Rotated class code",
   organization_renamed: "Renamed organization",
+  organization_logo_updated: "Updated organization branding",
+  organization_logo_removed: "Removed organization branding",
 };
 
 function describeEvent(event: AuditEvent) {
