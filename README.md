@@ -104,3 +104,13 @@ Do not put browser-visible configuration under a `NEXT_PUBLIC_` name unless it i
 - one customer organization per deployment
 - server-side autosave as the source of truth
 - 24-hour staging cleanup and seven-day unreferenced asset grace period
+
+### Question-set uploads
+
+Uploads now support image selection, folders (including subfolders), and ZIP archives. Choose an existing folder or enter a nested `Folder / Subfolder / Set name` destination, review naturally ordered image previews and warnings, then confirm the upload. Invalid files are skipped; valid images become draft questions with the selected choice count. Limits: 500 files, 4 MB per image, 100 MB ZIP input, 200 MB expanded ZIP contents.
+
+Apply migration `011_question_uploads.sql` using the existing migration command before serving the updated application. The Vercel build command already runs migrations. Uploads require the existing database and R2 environment variables. The server uploads each image to the private bucket, reads it back, and compares its size and SHA-256 before saving it as successful. The displayed folder hierarchy is stored in PostgreSQL; R2 uses stable import/file IDs as object keys. No bucket CORS change is required because transfers go through authenticated server routes.
+
+Successful images and per-file failures are saved in the question bank and import history. Retry failed files from the original upload tab; retries are idempotent for completed files. Closing the tab releases the local files, so unfinished uploads cannot currently resume from a new tab. If R2 succeeds but the database write fails, the deterministic object key allows a retry to reuse that staging object.
+
+Verification: `npm run test:uploads` checks validation and simulated R2 read-back failures (Node 22.15+); `npm run test:uploads:ui` runs Chrome tests for folders, ZIPs, nested paths, review, and retry behavior using a local fixture with simulated API responses. These tests do not contact a live bucket. Live R2 verification was not run in this checkout because its environment is unconfigured.

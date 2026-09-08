@@ -8,18 +8,22 @@
     "vercel-build": "node scripts/migrate.mjs && next build --webpack",
     "db:migrate": "node scripts/migrate.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:uploads": "node --import ./tests/register.mjs --test tests/uploads.test.mjs",
+    "test:uploads:ui": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
     "@aws-sdk/s3-request-presigner": "^3.1127.0",
     "better-auth": "^1.7.3",
+    "fflate": "^0.8.3",
     "next": "16.3.4",
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
