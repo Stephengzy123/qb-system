@@ -121,3 +121,21 @@ test('newer cloud work is not silently overwritten by an older local draft',asyn
   await expect(page.getByRole('group',{name:'Your choice for question 1'}).getByRole('radio',{name:'B',exact:true})).toBeChecked();
   await expect(page.getByRole('button',{name:'Save to cloud',exact:true})).toBeEnabled();
 });
+
+for(const width of [1280,390])test(`submission confirmation stays on screen while scrolling at ${width}px`,async({page})=>{
+  await page.setViewportSize({width,height:720});
+  await page.goto('/learn');
+  await page.getByRole('button',{name:'Submit assignment'}).click();
+  await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));
+  const button=page.getByRole('button',{name:'Confirm submission',exact:true});
+  await expect(button).toBeInViewport({ratio:1});
+  await expect(page.getByRole('button',{name:'Keep working'})).toBeInViewport({ratio:1});
+  await page.getByRole('button',{name:'Keep working'}).click();
+  await expect(button).toHaveCount(0);
+});
+test('completed assignment opens from card padding',async({page})=>{
+  await page.goto('/results-demo');
+  const card=page.getByRole('link',{name:'Biology practice',exact:true});
+  await card.click({position:{x:8,y:8}});
+  await expect(page).toHaveURL(`/student/assignments/${id(90)}`);
+});
