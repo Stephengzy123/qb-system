@@ -1,3 +1,5 @@
+import AssignmentList from "@/components/assignment-list";
+import { listAssignments } from "@/lib/assignments";
 import { notFound } from "next/navigation";
 import ClassDetail from "@/components/class-detail";
 import Workspace from "@/components/workspace";
@@ -12,5 +14,5 @@ export default async function ClassPage({ params }: PageProps<"/classes/[classId
   const { classId } = await params;
   const [detail, organizationName] = await Promise.all([getClassDetail(user, classId), getOrganizationName()]);
   if (!detail) notFound();
-  return <Workspace view="classes" user={user} organizationName={organizationName}><ClassDetail {...detail} /></Workspace>;
+  return <Workspace view="classes" user={user} organizationName={organizationName}><ClassDetail {...detail} /><h2>Assignments</h2><AssignmentList assignments={await listAssignments(user, classId)} /></Workspace>;
 }

@@ -208,6 +208,7 @@ export async function getStudentAssignments(userId: string) {
       WHERE cm.user_id = $1
         AND cm.role = 'student'
         AND cm.status = 'active'
+        AND c.archived_at IS NULL
         AND (a.open_at IS NULL OR a.open_at <= now())
       ORDER BY a.due_at NULLS LAST, a.created_at DESC`, [userId]);
   return result.rows;
