@@ -10,12 +10,12 @@ export async function canManageAssignment(user:AppUser,assignmentId:string) {
 }
 export async function getSavedWork(studentId:string,assignmentId:string) {
   const database=getDatabase();
-  const attempt=(await database.query<{id:string;status:string;revision:number;retry_after:number}>(`SELECT id,status,revision,GREATEST(0,CEIL(EXTRACT(EPOCH FROM (cloud_saved_at + $3 * interval '1 second' - clock_timestamp()))))::int AS retry_after FROM student_assignments WHERE student_id=$1 AND assignment_id=$2`,[studentId,assignmentId,CLOUD_SAVE_COOLDOWN_SECONDS])).rows[0];
+  const attempt=(await database.query<{id:string;status:string;revision:number;discarded_revision:number;retry_after:number}>(`SELECT id,status,revision,discarded_revision,GREATEST(0,CEIL(EXTRACT(EPOCH FROM (cloud_saved_at + $3 * interval '1 second' - clock_timestamp()))))::int AS retry_after FROM student_assignments WHERE student_id=$1 AND assignment_id=$2`,[studentId,assignmentId,CLOUD_SAVE_COOLDOWN_SECONDS])).rows[0];
   const answers=attempt?(await database.query<{question_id:string;choice_id:string|null}>(`SELECT assignment_question_id AS question_id,selected_choice_id AS choice_id FROM responses WHERE student_assignment_id=$1`,[attempt.id])).rows:[];
-  return {status:attempt?.status??'not_started',revision:attempt?.revision??0,answers,cooldownSeconds:attempt?.retry_after??0};
+  return {discardedRevision:attempt?.discarded_revision??0,status:attempt?.status??'not_started',revision:attempt?.revision??0,answers,cooldownSeconds:attempt?.retry_after??0};
 }
 export async function studentHistory(studentId:string,viewer?:AppUser) {
-  return (await getDatabase().query<HistoryItem>(`SELECT a.id,a.practice_student_id,a.title,COALESCE(c.name,'Personal practice') AS class_name,a.status AS assignment_status,COALESCE(sa.status::text,'not_started') AS status,sa.submitted_at,a.due_at,
+  return (await getDatabase().query<HistoryItem>(`SELECT a.id,a.practice_student_id,a.title,COALESCE(c.name,'Personal practice') AS class_name,a.status AS assignment_status,COALESCE(sa.status::text,'not_started') AS status,sa.submitted_at,a.due_at,COALESCE(sa.revision,0) AS revision,
     (SELECT count(*)::int FROM assignment_questions WHERE assignment_id=a.id) AS total,
     (SELECT count(*)::int FROM responses r WHERE r.student_assignment_id=sa.id AND r.is_correct=true AND sa.status='submitted') AS correct,
     (SELECT count(*)::int FROM responses r WHERE r.student_assignment_id=sa.id AND r.is_correct IS NOT NULL AND sa.status='submitted') AS graded

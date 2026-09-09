@@ -46,3 +46,45 @@ export async function POST(request:Request,{params}:{params:Promise<{assignmentI
   } catch(error) {await client.query('ROLLBACK');console.error('Save student work failed',error);return Response.json({error:'Could not confirm the save. Retry or reload to recover your saved work.'},{status:500});}
   finally {client.release();}
 }
+
+export async function DELETE(request:Request,{params}:{params:Promise<{assignmentId:string}>}) {
+  const user=await getAppUser();
+  if(!user || user.status!=='active' || user.role!=='student')return Response.json({error:'An active student account is required.'},{status:403});
+  const {assignmentId}=await params;
+  if(!isUuid(assignmentId))return Response.json({error:'Assignment not found.'},{status:404});
+  const input=await request.json().catch(()=>null);
+  if(!Number.isSafeInteger(input?.revision)||input.revision<0)return Response.json({error:'Reload this page before discarding progress.'},{status:400});
+  const client=await getDatabase().connect();
+  try {
+    await client.query('BEGIN');
+    // Same lock order as saving: assignment, then this student's attempt.
+    const assignment=(await client.query<{practice_student_id:string|null}>(`SELECT a.practice_student_id FROM assignments a WHERE a.id=$1 AND
+      (a.practice_student_id=$2 OR (a.practice_student_id IS NULL AND EXISTS(SELECT 1 FROM student_assignments sa WHERE sa.assignment_id=a.id AND sa.student_id=$2))
+      OR (a.practice_student_id IS NULL AND a.status='open' AND (a.open_at IS NULL OR a.open_at<=now()) AND EXISTS(SELECT 1 FROM classes c JOIN class_memberships cm ON cm.class_id=c.id WHERE c.id=a.class_id AND c.archived_at IS NULL AND cm.user_id=$2 AND cm.role='student' AND cm.status='active')))
+      FOR UPDATE OF a`,[assignmentId,user.id])).rows[0];
+    if(!assignment){await client.query('ROLLBACK');return Response.json({error:'Assignment not found.'},{status:404});}
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`${user.id}:${assignmentId}`]);
+    const attempt=(await client.query<{id:string;status:string;revision:number;has_submission:boolean}>(`SELECT sa.id,sa.status,sa.revision,EXISTS(SELECT 1 FROM submission_events se WHERE se.student_assignment_id=sa.id) AS has_submission
+      FROM student_assignments sa WHERE sa.assignment_id=$1 AND sa.student_id=$2 FOR UPDATE OF sa`,[assignmentId,user.id])).rows[0];
+    if(attempt && (attempt.status==='submitted'||attempt.status==='reopened'||attempt.has_submission)){
+      await client.query('ROLLBACK');return Response.json({error:'Submitted work cannot be discarded.'},{status:409});
+    }
+    if((attempt?.revision??0)!==input.revision){await client.query('ROLLBACK');return Response.json({error:'Your progress changed in another tab. Reload and review it before discarding.'},{status:409});}
+    if(attempt)await client.query('DELETE FROM responses WHERE student_assignment_id=$1',[attempt.id]);
+    const practice=Boolean(assignment.practice_student_id);
+    if(practice){
+      if(attempt)await client.query('DELETE FROM student_assignments WHERE id=$1 AND student_id=$2',[attempt.id,user.id]);
+      await client.query('DELETE FROM assignments WHERE id=$1 AND practice_student_id=$2',[assignmentId,user.id]);
+    }else if(attempt){
+      await client.query(`UPDATE student_assignments SET status='not_started',revision=revision+1,discarded_revision=revision+1,
+        cloud_saved_at=NULL,opened_at=NULL,submitted_at=NULL,is_late=false,current_position=0,randomized_question_ids=NULL,updated_at=now()
+        WHERE id=$1 AND student_id=$2`,[attempt.id,user.id]);
+    }else{
+      // Keep a revision marker even for drafts that existed only on a device.
+      await client.query('INSERT INTO student_assignments(assignment_id,student_id,revision,discarded_revision) VALUES($1,$2,1,1)',[assignmentId,user.id]);
+    }
+    await client.query("INSERT INTO audit_logs(actor_user_id,action,entity_type,entity_id) VALUES($1,'student_work.discarded','assignment',$2)",[user.id,assignmentId]);
+    await client.query('COMMIT');return Response.json({discarded:true,deleted:practice,revision:input.revision+1});
+  }catch(error){await client.query('ROLLBACK');console.error('Discard progress failed',error);return Response.json({error:'Could not confirm the discard. Reload to check your progress.'},{status:500});}
+  finally{client.release();}
+}

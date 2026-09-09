@@ -1,23 +1,32 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
+import DiscardProgress from '@/components/discard-progress';
 import Link from 'next/link';
 import { useCallback,useEffect,useRef,useState,useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import { CLOUD_SAVE_COOLDOWN_SECONDS,draftKey,parseLocalDraft } from '@/lib/local-work';
+import { CLOUD_SAVE_COOLDOWN_SECONDS,draftKey,discardKey,parseLocalDraft } from '@/lib/local-work';
 export type WorkQuestion={id:string;name:string;asset_id:string|null;choices:{id:string;label:string}[]};
 const subscribe=()=>()=>undefined;
-type WorkProps={studentId:string;assignmentId:string;questions:WorkQuestion[];revision:number;answers:{question_id:string;choice_id:string|null}[];cooldownSeconds?:number};
+type WorkProps={studentId:string;assignmentId:string;questions:WorkQuestion[];revision:number;answers:{question_id:string;choice_id:string|null}[];cooldownSeconds?:number;discardedRevision?:number;practice?:boolean};
 export default function StudentWork(props:WorkProps) {
   const ready=useSyncExternalStore(subscribe,()=>true,()=>false);
   return ready?<WorkEditor key={`${props.studentId}:${props.assignmentId}:${props.revision}`} {...props} />:<section className="panel answer-editor"><p>Loading your saved answers…</p></section>;
 }
-function WorkEditor({studentId,assignmentId,questions,revision:initialRevision,answers,cooldownSeconds=0}:WorkProps) {
+function WorkEditor({studentId,assignmentId,questions,revision:initialRevision,answers,cooldownSeconds=0,discardedRevision=0,practice=false}:WorkProps) {
   const router=useRouter();
   const ready=true;
+  const [discarded,setDiscarded]=useState(false);
+  useEffect(()=>{
+    const reset=()=>{setDiscarded(true);router.refresh();};
+    const storage=(event:StorageEvent)=>{if(event.key===discardKey(studentId,assignmentId))reset();};
+    const local=(event:Event)=>{if((event as CustomEvent).detail===assignmentId)reset();};
+    window.addEventListener('storage',storage);window.addEventListener('qb-work-discarded',local);
+    return()=>{window.removeEventListener('storage',storage);window.removeEventListener('qb-work-discarded',local);};
+  },[studentId,assignmentId,router]);
   const storageKey=draftKey(studentId,assignmentId);
   const initial=Object.fromEntries(questions.map(q=>[q.id,answers.find(a=>a.question_id===q.id)?.choice_id??null]));
   const [recovery]=useState(()=>{
-    try{return {draft:parseLocalDraft(localStorage.getItem(storageKey),questions),failed:false};}
+    try{return {draft:parseLocalDraft(localStorage.getItem(storageKey),questions,discardedRevision),failed:false};}
     catch{return {draft:null,failed:true};}
   });
   const matchesCloud=recovery.draft&&questions.every(q=>recovery.draft!.answers[q.id]===initial[q.id]);
@@ -89,8 +98,9 @@ function WorkEditor({studentId,assignmentId,questions,revision:initialRevision,a
     } catch(error){setError((error as Error).message);} finally{sending.current=false;setBusy(false);}
   },[conflict,cooldownUntil,persist,selected,assignmentId,revision,questions,storageKey,router]);
   /* eslint-enable react-hooks/purity */
+  if(discarded)return <section className="panel answer-editor"><p role="status">This progress was discarded. Reloading your work…</p><Link href="/student">Back to my work</Link></section>;
   if(submitted)return <section className="panel assignment-form"><h2>Work submitted</h2><p role="status">Your answers are saved. Loading your results…</p><Link href={`/student/assignments/${assignmentId}`}>View results</Link></section>;
-  return <section className="panel answer-editor"><div className="answer-toolbar"><div><h2>Your answers</h2><p>{questions.length-unanswered} of {questions.length} answered{dirty?' · Not yet saved to cloud':''}</p></div><div className="empty-actions"><button className="secondary-button" disabled={busy||!ready||!dirty||conflict||remaining>0} onClick={()=>void send('save')}>{remaining>0?`Save to cloud (${remaining}s)`:'Save to cloud'}</button><button className="primary-button" disabled={busy||!ready||conflict||!questions.length} onClick={()=>setConfirm(true)}>Submit answers</button></div></div>
+  return <section className="panel answer-editor"><div className="answer-toolbar"><div><h2>Your answers</h2><p>{questions.length-unanswered} of {questions.length} answered{dirty?' · Not yet saved to cloud':''}</p></div><div className="empty-actions"><button className="secondary-button" disabled={busy||!ready||!dirty||conflict||remaining>0} onClick={()=>void send('save')}>{remaining>0?`Save to cloud (${remaining}s)`:'Save to cloud'}</button><button className="primary-button" disabled={busy||!ready||conflict||!questions.length} onClick={()=>setConfirm(true)}>Submit answers</button><DiscardProgress studentId={studentId} assignmentId={assignmentId} revision={revision} practice={practice} disabled={busy||confirm} leaveOnDiscard /></div></div>
     <p className={localState==='failed'?'upload-warning':''} aria-live="polite">{localState==='failed'?(dirty?'Local saving is unavailable. Keep this page open until you save to cloud or submit.':'Local saving is unavailable. Your cloud answers are safe; save new changes to cloud before leaving.'):localState==='saved'?'Saved on this device. Answer changes are saved locally automatically.':'Answer changes save automatically on this device. Use Save to cloud to back them up to your account.'}</p>
     {conflict&&<div className="upload-warning" role="region" aria-label="Resolve local draft"><h3>Your local draft and cloud answers differ</h3><p>The cloud version changed after this draft was saved. Choose which answers to keep before continuing.</p><button className="secondary-button" onClick={()=>resolve(true)}>Use local answers</button> <button className="secondary-button" onClick={()=>resolve(false)}>Use cloud answers</button></div>}
     {error&&!confirm&&<p className="upload-warning" role="alert">{error}</p>}{message&&<p className="upload-success" role="status">{message}</p>}

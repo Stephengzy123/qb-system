@@ -198,9 +198,9 @@ export async function getStudentAssignments(userId: string) {
   const database = getDatabase();
   const result = await database.query<{
     id: string; title: string; class_name: string; due_at: Date | null;
-    student_status: string | null; submitted_at: Date | null;
+    student_status: string | null; submitted_at: Date | null; revision:number;
   }>(`SELECT a.id, a.title, c.name AS class_name, a.due_at,
-            sa.status AS student_status, sa.submitted_at
+            sa.status AS student_status, sa.submitted_at, COALESCE(sa.revision,0) AS revision
        FROM class_memberships cm
        JOIN classes c ON c.id = cm.class_id
        JOIN assignments a ON a.class_id = c.id AND a.status = 'open'
