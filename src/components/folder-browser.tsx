@@ -1,3 +1,4 @@
+import NewFolder from '@/components/new-folder';
 import Link from 'next/link';
 import { folderAncestors, type BankFolder, type BankSet } from '@/lib/question-bank-model';
 
@@ -25,11 +26,12 @@ export default function FolderBrowser({ folders, sets, currentId }: { folders: B
     <div className="folder-content"><FolderBreadcrumbs folders={folders} currentId={currentId} />
       <h2>{selected?.name ?? 'All folders'}</h2>
       <p className="folder-description">{children.length} folders · {currentSets.length} sets{!currentId ? ` · ${sets.length} sets across the question bank` : ''}</p>
+      <div className="folder-actions">{(!currentId||selected?.can_upload)&&<NewFolder key={currentId??'root'} parentId={currentId} parentPath={selected?.path} />}{selected?.can_upload&&<Link className="primary-button" href={`/admin/question-bank/upload?folder=${encodeURIComponent(selected.id)}`}>Add set to folder</Link>}</div>
       {children.length > 0 && <div className="folder-grid">{children.map(folder => <Link className="folder-card" href={folderHref(folder.id)} key={folder.id}><span aria-hidden="true">▱</span><strong>{folder.name}</strong><small>{folder.path}</small></Link>)}</div>}
       {currentSets.length > 0 && <div className="set-list">{currentSets.map(set => <Link className="set-row" href={`/admin/question-bank/sets/${set.id}`} key={set.id}>
         <span aria-hidden="true">▤</span><div><strong>{set.name}</strong><small>{set.path} / {set.name}</small><small>{set.count} questions · {set.answered}/{set.count} answers set · {set.status}</small></div><span aria-hidden="true">→</span>
       </Link>)}</div>}
-      {!children.length && !currentSets.length && <div className="empty-state"><h3>{currentId ? 'This folder is empty' : 'No folders yet'}</h3><p>Upload a set and choose its folder path to add questions here.</p><Link className="primary-button" href="/admin/question-bank/upload">Upload a set</Link></div>}
+      {!children.length && !currentSets.length && <div className="empty-state"><h3>{currentId ? 'This folder is empty' : 'No folders yet'}</h3><p>Open or create a folder, then add a set where you have upload access.</p></div>}
     </div>
   </section>;
 }

@@ -67,3 +67,13 @@ test('previously saved gradients survive the palette upgrade',async({page})=>{
   await page.getByRole('button',{name:'Reset appearance'}).click();
   await expect(page.locator('.app-shell')).not.toHaveAttribute('data-admin-appearance');
 });
+test('secondary palette overrides dark theme on a fresh page load',async({page})=>{
+  await page.goto('/navigation-demo?role=admin&settings=1');
+  await page.evaluate(()=>localStorage.setItem('aoma-theme','dark'));await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  await page.getByText('Admin appearance (temporary)',{exact:true}).click();
+  await page.getByLabel('Secondary color',{exact:true}).fill('#eebb55');
+  await expect(page.getByRole('button',{name:'Secondary preview',exact:true})).toHaveCSS('background-color','rgb(238, 187, 85)');
+  await page.reload();await page.getByText('Admin appearance (temporary)',{exact:true}).click();
+  await expect(page.getByRole('button',{name:'Secondary preview',exact:true})).toHaveCSS('background-color','rgb(238, 187, 85)');
+});

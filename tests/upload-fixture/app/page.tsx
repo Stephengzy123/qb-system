@@ -1,2 +1,3 @@
 import QuestionUpload from '../../../src/components/question-upload';
-export default function Page() {return <QuestionUpload folders={['Biology / Year 1']} />;}
+import {folders} from '../bank-data';
+export default async function Page({searchParams}:{searchParams:Promise<{folder?:string}>}) {return <QuestionUpload folders={folders} initialFolderId={(await searchParams).folder??null} />;}

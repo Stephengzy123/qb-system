@@ -1,10 +1,11 @@
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 export const MAX_FILES = 500;
-export function pathParts(value: unknown): string[] {
-  if (typeof value !== "string" || value.length > 1000) throw new Error("Enter a destination such as Biology / Chapter 1 / Practice set.");
-  const parts = value.split("/").map((part) => part.trim());
-  if (parts.length < 2 || parts.length > 20 || parts.some((part) => !part || part === "." || part === ".." || part.length > 100 || /[\\\x00-\x1f]/.test(part))) throw new Error("Use a folder and set name separated by /, with no empty names, dots, or backslashes.");
-  return parts;
+export function destinationName(value: unknown): string {
+  if(typeof value!=="string")throw new Error('Enter a name.');
+  const name=value.trim().normalize('NFC');
+  if(!name || name.length>100 || name==='.' || name==='..' || /[/\\\x00-\x1f]/.test(name))
+    throw new Error('Use a name of 1–100 characters, without slashes or dot-only names.');
+  return name;
 }
 export function validSourcePath(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= 1000 && !/[\\\x00-\x1f]/.test(value) && value.split("/").every((p) => p && p !== "." && p !== "..");

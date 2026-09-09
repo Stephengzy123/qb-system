@@ -2,20 +2,27 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import UploadReturnNotice, { LAST_UPLOAD_KEY } from "@/components/upload-return-notice";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { unzipSync } from "fflate";
-import { imageType, MAX_FILES, MAX_IMAGE_BYTES, pathParts, validSourcePath } from "@/lib/upload-validation";
+import { imageType, MAX_FILES, MAX_IMAGE_BYTES, destinationName, validSourcePath } from "@/lib/upload-validation";
 
+import UploadFolderPicker from '@/components/upload-folder-picker';
+import type {BankFolder} from '@/lib/question-bank-model';
+const subscribe=()=>()=>undefined;
 type Item={file:File;path:string;preview?:string;warning?:string;id?:string;status?:string;error?:string;assetId?:string};
 async function jsonResponse(response:Response) {
   const data=await response.json().catch(()=>({error:`Request failed (${response.status}). Please retry.`}));
   if(!response.ok) throw new Error(data.error??'The request failed.');
   return data;
 }
-export default function QuestionUpload({folders}:{folders:string[]}) {
+export default function QuestionUpload({folders,initialFolderId=null}:{folders:BankFolder[];initialFolderId?:string|null}) {
+  const ready=useSyncExternalStore(subscribe,()=>true,()=>false);
+  const [folderItems,setFolderItems]=useState(folders);
+  const [folderId,setFolderId]=useState<string|null>(initialFolderId);
+  const folder=folderItems.find(item=>item.id===folderId);
   const [items,setItems]=useState<Item[]>([]);
   const [step,setStep]=useState<'select'|'review'|'results'>('select');
-  const [path,setPath]=useState('');
+  const [setName,setSetName]=useState('');
   const [choices,setChoices]=useState(4);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
@@ -74,12 +81,12 @@ export default function QuestionUpload({folders}:{folders:string[]}) {
       }
       urls.current.forEach(url=>URL.revokeObjectURL(url));urls.current=newUrls;
       setItems(next);setJob(undefined);setStep('select');
-      if(!path && sources[0]?.path.includes('/')) setPath(`Question bank / ${sources[0].path.split('/')[0]}`);
+      if(!setName && sources[0]?.path.includes('/')) setSetName(sources[0].path.split('/')[0].slice(0,100));
     } catch(e) {newUrls.forEach(url=>URL.revokeObjectURL(url));setError(e instanceof Error?e.message:'Unable to read these files.');}
     finally {setBusy(false);}
   }
   function review() {
-    try {pathParts(path);setError('');setStep('review');} catch(e) {setError((e as Error).message);}
+    try {if(!folder?.can_upload)throw new Error('Choose a folder where you have upload access.');setSetName(destinationName(setName));setError('');setStep('review');} catch(e) {setError((e as Error).message);}
   }
   async function upload() {
     setBusy(true);setError('');
@@ -87,7 +94,7 @@ export default function QuestionUpload({folders}:{folders:string[]}) {
     try {
       let id=job;
       if(!id) {
-        const created=await jsonResponse(await fetch('/api/question-imports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,choiceCount:choices,files:items.filter(i=>!i.warning).map(i=>i.path)})}));
+        const created=await jsonResponse(await fetch('/api/question-imports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folderId,setName,choiceCount:choices,files:items.filter(i=>!i.warning).map(i=>i.path)})}));
         id=created.id;setJob(id);
         try { sessionStorage.setItem(LAST_UPLOAD_KEY, created.id); } catch { /* Uploads also work with browser storage disabled. */ }
         current=items.map(item=>({...item,id:created.files.find((f:{source_path:string;id:string})=>f.source_path===item.path)?.id}));
@@ -114,29 +121,28 @@ export default function QuestionUpload({folders}:{folders:string[]}) {
     {uploading && <div className="upload-notice attention"><h2>Please keep this page open</h2><p>Do not leave or refresh this page while your images are uploading and being verified. You can switch tabs and return here to see the result.</p><p>We will show a completion message or tell you what needs attention when every file has been checked.</p><progress aria-label="Upload progress" max={valid.length || 1} value={succeeded + failed} /></div>}
     {error && <p role="alert" className="upload-warning">{error}</p>}
     {step==='select' && <>
-      <div className="upload-pickers"><label>Images or ZIP<input type="file" multiple accept="image/png,image/jpeg,image/webp,.zip" disabled={busy} onChange={e=>{void selectFiles(Array.from(e.target.files??[]));e.target.value='';}} /></label><label>Folder (includes subfolders)<input type="file" multiple {...{webkitdirectory:""}} disabled={busy} onChange={e=>{void selectFiles(Array.from(e.target.files??[]));e.target.value='';}} /></label></div>
+      <div className="upload-pickers"><label>Images or ZIP<input type="file" multiple accept="image/png,image/jpeg,image/webp,.zip" disabled={busy||!ready} onChange={e=>{void selectFiles(Array.from(e.target.files??[]));e.target.value='';}} /></label><label>Folder (includes subfolders)<input type="file" multiple {...{webkitdirectory:""}} disabled={busy||!ready} onChange={e=>{void selectFiles(Array.from(e.target.files??[]));e.target.value='';}} /></label></div>
       <p>PNG, JPEG, or WebP. Up to 500 files, 4 MB per image. Folder paths are preserved in the review; all images become one set.</p>
-      <label className="upload-field">Existing folder<select value="" onChange={e=>{if(e.target.value)setPath(`${e.target.value} / ${path.split('/').at(-1)?.trim()||'New set'}`);}}><option value="">Choose a folder…</option>{folders.map(folder=><option key={folder}>{folder}</option>)}</select></label>
-      <label className="upload-field">Destination path, including set name<input value={path} onChange={e=>setPath(e.target.value)} placeholder="Biology / Year 1 / Chapter 3 / Practice set" maxLength={1000} /></label>
-      <p>Separate folders with /. Missing folders will be created. The last part is the set name.</p>
+      <UploadFolderPicker folders={folderItems} currentId={folderId} disabled={busy||!ready} onSelect={id=>{setFolderId(id);setError('');}} onCreated={created=>{setFolderItems(items=>[...items.filter(f=>f.id!==created.id),created]);setFolderId(created.id);setError('');}} />
+      <label className="upload-field">Set name<input value={setName} onChange={e=>setSetName(e.target.value)} placeholder="Practice set" maxLength={100} disabled={busy||!ready} /></label>
       <label className="upload-field">Choices per question<select value={choices} onChange={e=>setChoices(Number(e.target.value))}>{Array.from({length:9},(_,i)=>i+2).map(n=><option key={n}>{n}</option>)}</select></label>
-      <button className="primary-button" disabled={busy||!valid.length} onClick={review}>{busy?'Reading files…':'Continue to review'}</button>
+      <button className="primary-button" disabled={busy||!ready||!valid.length} onClick={review}>{busy?'Reading files…':'Continue to review'}</button>
     </>}
-    {step==='review' && <><h2>Review {valid.length} images</h2><p><strong>{pathParts(path).join(' / ')}</strong> · {choices} choices per question · Saved as a draft</p><p>Check the images and order below. Files with warnings will be skipped.</p><div className="empty-actions"><button className="secondary-button" disabled={busy} onClick={()=>setStep('select')}>Back</button><button className="primary-button" disabled={busy||!valid.length} onClick={()=>void upload()}>{busy?'Starting…':`Confirm and upload ${valid.length} images`}</button></div></>}
+    {step==='review' && <><h2>Review {valid.length} images</h2><p><strong>{folder?.path} / {setName}</strong> · {choices} choices per question · Saved as a draft</p><p>Check the images and order below. Files with warnings will be skipped.</p><div className="empty-actions"><button className="secondary-button" disabled={busy||!ready} onClick={()=>setStep('select')}>Back</button><button className="primary-button" disabled={busy||!ready||!valid.length} onClick={()=>void upload()}>{busy?'Starting…':`Confirm and upload ${valid.length} images`}</button></div></>}
     {step==='results' && <>
       <div className={`upload-notice ${busy ? '' : failed || succeeded < valid.length || items.some(item => item.warning) ? 'attention' : 'complete'}`}>
         <h2>{busy ? 'Uploading and verifying…' : failed || succeeded < valid.length || items.some(item => item.warning) ? 'Upload needs attention' : 'Upload complete'}</h2>
         <p role="status">{succeeded} of {valid.length} images verified in R2. {failed>0?`${failed} failed.`:''} {items.length-valid.length>0?`${items.length-valid.length} skipped.`:''}</p>
         {!busy && <p>{failed || succeeded < valid.length ? 'Processing has finished. Review the failures below and retry failed files before leaving.' : items.some(item => item.warning) ? 'All selected valid images are uploaded and verified. Review the skipped-file warnings below. It is now safe to leave this page.' : 'All images are uploaded and verified. It is now safe to leave this page.'} This result stays here when you switch tabs and return.</p>}
       </div>
-      <div className="empty-actions">{failed>0 && <button className="primary-button" disabled={busy} onClick={()=>void upload()}>Retry failed files</button>}{job && !busy && <Link className="secondary-button" href={`/admin/question-bank/imports/${job}`}>Review saved upload</Link>}{!busy && <Link className="secondary-button" href="/admin/question-bank">Go to question bank</Link>}</div>
+      <div className="empty-actions">{failed>0 && <button className="primary-button" disabled={busy||!ready} onClick={()=>void upload()}>Retry failed files</button>}{job && !busy && <Link className="secondary-button" href={`/admin/question-bank/imports/${job}`}>Review saved upload</Link>}{!busy && <Link className="secondary-button" href="/admin/question-bank">Go to question bank</Link>}</div>
     </>}
     {items.length>0 && <div className="upload-review-grid">{items.map((item,index)=><article className="upload-review-card" key={`${item.path}-${index}`}>
       {item.preview && <a href={item.assetId?`/api/question-assets/${item.assetId}`:item.preview} target="_blank" rel="noreferrer"><img src={item.assetId?`/api/question-assets/${item.assetId}`:item.preview} alt={`Preview of ${item.path}`} loading="lazy" /></a>}
       <strong>{item.path}</strong><small>{(item.file.size/1024).toFixed(1)} KB</small>
       {(item.warning||item.error) && <p className="upload-warning" role="alert">{item.warning?`Skipped: ${item.warning}`:item.error}</p>}
       {item.status && <p>{item.status==='succeeded'?'✓ Verified in R2':item.status==='uploading'?'Uploading and checking storage…':item.status==='failed'?'Upload failed':''}</p>}
-      {step!=='results' && <button className="secondary-button" disabled={busy} onClick={()=>setItems(prev=>prev.filter((_,i)=>i!==index))}>Remove</button>}
+      {step!=='results' && <button className="secondary-button" disabled={busy||!ready} onClick={()=>setItems(prev=>prev.filter((_,i)=>i!==index))}>Remove</button>}
     </article>)}</div>}
   </section>;
 }

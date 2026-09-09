@@ -1,16 +1,11 @@
 import { getDatabase, type AppUser } from '@/lib/app-user';
-import { folderTree } from '@/lib/question-imports';
-import { isUuid, type BankFolder, type BankSet, type SetQuestion } from '@/lib/question-bank-model';
+import { folderTree, listUploadFolders } from '@/lib/question-imports';
+import { isUuid, type BankSet, type SetQuestion } from '@/lib/question-bank-model';
 
 export async function getFolderBrowser(user: AppUser) {
   const database = getDatabase();
   const args = [user.id, user.role === 'admin'];
-  const folders = await database.query<BankFolder>(`${folderTree}, visible AS (
-    SELECT id FROM folders f WHERE $2::boolean OR f.created_by=$1
-      OR EXISTS (SELECT 1 FROM folder_permissions p WHERE p.folder_id=f.id AND p.user_id=$1 AND (p.can_view OR p.can_edit OR p.can_upload))
-      OR EXISTS (SELECT 1 FROM question_sets s WHERE s.folder_id=f.id AND s.created_by=$1 AND s.deleted_at IS NULL)
-    UNION SELECT f.parent_folder_id FROM folders f JOIN visible v ON v.id=f.id WHERE f.parent_folder_id IS NOT NULL
-  ) SELECT tree.id,tree.parent_folder_id,tree.name,tree.path FROM tree JOIN visible ON visible.id=tree.id ORDER BY tree.name`, args);
+  const folders = await listUploadFolders(user);
   const sets = await database.query<BankSet>(`${folderTree}
     SELECT s.id,s.folder_id,s.name,s.status,tree.path,count(sq.id)::int AS count,
       count(a.set_question_id)::int AS answered,
@@ -22,7 +17,7 @@ export async function getFolderBrowser(user: AppUser) {
     WHERE s.deleted_at IS NULL AND ($2::boolean OR s.created_by=$1 OR EXISTS (
       SELECT 1 FROM folder_permissions p WHERE p.folder_id=s.folder_id AND p.user_id=$1 AND (p.can_view OR p.can_edit)))
     GROUP BY s.id,tree.path ORDER BY s.name`, args);
-  return { folders: folders.rows, sets: sets.rows };
+  return { folders, sets: sets.rows };
 }
 
 export async function getQuestionSet(user: AppUser, id: string) {

@@ -1,9 +1,9 @@
 import type { BankFolder, BankSet, SetQuestion } from '../../src/lib/question-bank-model';
 export const folders: BankFolder[] = [
-  { id: 'root', parent_folder_id: null, name: 'Biology', path: 'Biology' },
-  { id: 'year', parent_folder_id: 'root', name: 'Year 1', path: 'Biology / Year 1' },
-  { id: 'chapter', parent_folder_id: 'year', name: 'Chapter 3', path: 'Biology / Year 1 / Chapter 3' },
-  { id: 'empty', parent_folder_id: 'root', name: 'Empty folder', path: 'Biology / Empty folder' },
+  { id: 'root', parent_folder_id: null, name: 'Biology', can_upload: true, path: 'Biology' },
+  { id: 'year', parent_folder_id: 'root', name: 'Year 1', can_upload: true, path: 'Biology / Year 1' },
+  { id: 'chapter', parent_folder_id: 'year', name: 'Chapter 3', can_upload: true, path: 'Biology / Year 1 / Chapter 3' },
+  { id: 'empty', parent_folder_id: 'root', name: 'Empty folder', can_upload: false, path: 'Biology / Empty folder' },
 ];
 export const sets: BankSet[] = [{ id: 'practice', folder_id: 'chapter', name: 'Practice set', path: 'Biology / Year 1 / Chapter 3', status: 'draft', count: 2, answered: 1, import_id: null }];
 export const questions: SetQuestion[] = [

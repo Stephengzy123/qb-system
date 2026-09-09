@@ -17,7 +17,7 @@ test('folder upload preserves nested names, reviews, warns, and retries only fai
     await page.route('**/api/question-imports',async route=>{
       created++;
       const data=route.request().postDataJSON();
-      expect(data.path).toBe('Biology / Year 1 / Chapter 3 / Practice set');
+      expect(data.folderId).toBe('chapter');expect(data.setName).toBe('Practice set');expect(data.path).toBeUndefined();
       expect(data.files).toHaveLength(2);
       expect(data.files[0]).toMatch(/Nested\/Question2.png$/);
       expect(data.files[1]).toMatch(/Nested\/Question10.png$/);
@@ -34,7 +34,10 @@ test('folder upload preserves nested names, reviews, warns, and retries only fai
     await page.getByLabel('Folder (includes subfolders)').setInputFiles(directory);
     await expect(page.getByRole('button',{name:'Continue to review'})).toBeEnabled();
     await expect(page.getByText('Skipped: Unsupported file.')).toBeVisible();
-    await page.getByLabel('Destination path, including set name').fill('Biology / Year 1 / Chapter 3 / Practice set');
+    await page.getByRole('button',{name:'Biology Open folder'}).click();
+    await page.getByRole('button',{name:'Year 1 Open folder'}).click();
+    await page.getByRole('button',{name:'Chapter 3 Open folder'}).click();
+    await page.getByLabel('Set name',{exact:true}).fill('Practice set');
     await page.getByRole('button',{name:'Continue to review'}).click();
     await expect(page.getByRole('heading',{name:'Review 2 images'})).toBeVisible();
     await page.getByRole('button',{name:'Confirm and upload 2 images'}).click();
@@ -53,10 +56,11 @@ test('ZIP preview, destination validation, and backend failures remain actionabl
   const zip=zipSync({'Folder/Question2.png':png,'Folder/readme.txt':Buffer.from('notes')});
   await page.getByLabel('Images or ZIP').setInputFiles({name:'questions.zip',mimeType:'application/zip',buffer:Buffer.from(zip)});
   await expect(page.getByRole('button',{name:'Continue to review'})).toBeEnabled();
-  await page.getByLabel('Destination path, including set name').fill('Biology/../set');
+  await page.getByRole('button',{name:'Biology Open folder'}).click();
+  await page.getByLabel('Set name',{exact:true}).fill('Biology/../set');
   await page.getByRole('button',{name:'Continue to review'}).click();
-  await expect(page.getByText('Use a folder and set name separated')).toBeVisible();
-  await page.getByLabel('Destination path, including set name').fill('Biology / New set');
+  await expect(page.getByText('Use a name of 1–100 characters, without slashes or dot-only names.')).toBeVisible();
+  await page.getByLabel('Set name',{exact:true}).fill('New set');
   await page.getByRole('button',{name:'Continue to review'}).click();
   await page.route('**/api/question-imports',route=>route.fulfill({status:503,json:{error:'R2 storage is not configured.'}}));
   await page.getByRole('button',{name:'Confirm and upload 1 images'}).click();
@@ -76,7 +80,8 @@ test('upload warns against leaving, keeps final result, and restores saved revie
   await page.route('**/api/question-imports/last-upload', route => route.fulfill({json:{id:'last-upload',source_name:'Practice',total_files:1,succeeded_files:1,failed_files:0,status:'completed'}}));
   await page.goto('/');
   await page.getByLabel('Images or ZIP').setInputFiles({name:'Question.png',mimeType:'image/png',buffer:png});
-  await page.getByLabel('Destination path, including set name').fill('Biology / Practice');
+  await page.getByRole('button',{name:'Biology Open folder'}).click();
+  await page.getByLabel('Set name',{exact:true}).fill('Practice');
   await page.getByRole('button',{name:'Continue to review'}).click();
   await page.getByRole('button',{name:'Confirm and upload 1 images'}).click();
   await expect(page.getByRole('heading',{name:'Please keep this page open'})).toBeVisible();
@@ -92,4 +97,43 @@ test('upload warns against leaving, keeps final result, and restores saved revie
   await page.reload();
   await expect(page.getByRole('heading',{name:'Your previous upload is complete'})).toBeVisible();
   await expect(page.getByRole('link',{name:'Review upload results'})).toHaveAttribute('href','/admin/question-bank/imports/last-upload');
+});
+
+test('create a child folder and select it without losing uploaded images',async({page})=>{
+  await page.route('**/api/folders',async route=>{
+    expect(route.request().postDataJSON()).toEqual({parentId:'year',name:'Chapter 4'});
+    await route.fulfill({json:{folder:{id:'new-chapter',parent_folder_id:'year',name:'Chapter 4',can_upload:true}}});
+  });
+  await page.goto('/?folder=year');
+  await page.getByLabel('Images or ZIP').setInputFiles({name:'Question.png',mimeType:'image/png',buffer:png});
+  await page.getByRole('button',{name:'New folder',exact:true}).click();
+  await page.getByLabel('Folder name',{exact:true}).fill('Chapter 4');
+  await page.getByRole('button',{name:'Create folder',exact:true}).click();
+  await expect(page.getByText('Selected folder:',{exact:false})).toContainText('Biology / Year 1 / Chapter 4');
+  await expect(page.getByRole('img',{name:'Preview of Question.png'})).toBeVisible();
+  await page.getByLabel('Set name',{exact:true}).fill('Practice');
+  await page.getByRole('button',{name:'Continue to review'}).click();
+  await expect(page.getByText('Biology / Year 1 / Chapter 4 / Practice',{exact:true})).toBeVisible();
+});
+test('folder actions preselect an upload destination and disappear for read-only folders',async({page})=>{
+  await page.goto('/admin/question-bank?folder=chapter');
+  await page.getByRole('link',{name:'Add set to folder',exact:true}).click();
+  await expect(page.getByText('Selected folder:',{exact:false})).toContainText('Biology / Year 1 / Chapter 3');
+  await page.goto('/admin/question-bank?folder=empty');
+  await expect(page.getByRole('link',{name:'Add set to folder',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'New folder',exact:true})).toHaveCount(0);
+  await page.goto('/?folder=empty');
+  await expect(page.getByText('Selected folder:',{exact:false})).toContainText('Browse only');
+  await expect(page.getByRole('button',{name:'New folder',exact:true})).toHaveCount(0);
+  await page.getByLabel('Images or ZIP').setInputFiles({name:'Question.png',mimeType:'image/png',buffer:png});
+  await page.getByLabel('Set name',{exact:true}).fill('Practice');await page.getByRole('button',{name:'Continue to review'}).click();
+  await expect(page.getByText('Choose a folder where you have upload access.',{exact:true})).toBeVisible();
+});
+test('duplicate folder error remains actionable and destination picker fits a phone',async({page})=>{
+  await page.setViewportSize({width:375,height:812});
+  await page.route('**/api/folders',route=>route.fulfill({status:409,json:{error:'A folder with this name already exists here. Select the existing folder.'}}));
+  await page.goto('/?folder=root');await page.getByRole('button',{name:'New folder',exact:true}).click();
+  await page.getByLabel('Folder name',{exact:true}).fill('Year 1');await page.getByRole('button',{name:'Create folder',exact:true}).click();
+  await expect(page.getByText('A folder with this name already exists here. Select the existing folder.',{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

@@ -9,6 +9,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "start": "next start",
     "lint": "eslint",
+    "test:folders": "node --import ./tests/register.mjs --test tests/folders.test.mjs",
     "test:uploads": "node --import ./tests/register.mjs --test tests/uploads.test.mjs",
     "test:uploads:ui": "playwright test",
     "test:question-bank": "node --import ./tests/register.mjs --test tests/question-bank.test.mjs",

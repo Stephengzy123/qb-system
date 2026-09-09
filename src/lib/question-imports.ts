@@ -1,10 +1,18 @@
 import { getDatabase, type AppUser } from "@/lib/app-user";
+import type { BankFolder } from "@/lib/question-bank-model";
 export const folderTree = `WITH RECURSIVE tree AS (
   SELECT id, parent_folder_id, name, created_by, name::text AS path FROM folders WHERE parent_folder_id IS NULL
   UNION ALL SELECT f.id, f.parent_folder_id, f.name, f.created_by, tree.path || ' / ' || f.name FROM folders f JOIN tree ON f.parent_folder_id = tree.id
 )`;
 export async function listUploadFolders(user: AppUser) {
-  return (await getDatabase().query<{path:string}>(`${folderTree} SELECT path FROM tree WHERE $2::boolean OR created_by=$1 OR EXISTS (SELECT 1 FROM folder_permissions p WHERE p.folder_id=tree.id AND p.user_id=$1 AND p.can_upload) ORDER BY path`, [user.id,user.role==='admin'])).rows;
+  return (await getDatabase().query<BankFolder>(`${folderTree}, visible AS (
+    SELECT id FROM folders f WHERE $2::boolean OR f.created_by=$1
+      OR EXISTS(SELECT 1 FROM folder_permissions p WHERE p.folder_id=f.id AND p.user_id=$1 AND (p.can_view OR p.can_edit OR p.can_upload))
+      OR EXISTS(SELECT 1 FROM question_sets s WHERE s.folder_id=f.id AND s.created_by=$1 AND s.deleted_at IS NULL)
+    UNION SELECT f.parent_folder_id FROM folders f JOIN visible v ON v.id=f.id WHERE f.parent_folder_id IS NOT NULL
+  ) SELECT tree.id,tree.parent_folder_id,tree.name,tree.path,
+    ($2::boolean OR tree.created_by=$1 OR EXISTS(SELECT 1 FROM folder_permissions p WHERE p.folder_id=tree.id AND p.user_id=$1 AND p.can_upload)) AS can_upload
+    FROM tree JOIN visible ON visible.id=tree.id ORDER BY tree.name`,[user.id,user.role==='admin'])).rows;
 }
 export async function listQuestionSets(user: AppUser) {
   return (await getDatabase().query<{id:string;name:string;path:string;count:number;import_id:string}>(`${folderTree} SELECT s.id,s.name,tree.path,count(sq.id)::int AS count,(SELECT id FROM imports WHERE set_id=s.id ORDER BY created_at DESC LIMIT 1) AS import_id FROM question_sets s JOIN tree ON tree.id=s.folder_id LEFT JOIN set_questions sq ON sq.set_id=s.id WHERE s.deleted_at IS NULL AND ($2::boolean OR s.created_by=$1 OR EXISTS (SELECT 1 FROM folder_permissions p WHERE p.folder_id=s.folder_id AND p.user_id=$1 AND p.can_view)) GROUP BY s.id,tree.path ORDER BY s.created_at DESC`,[user.id,user.role==='admin'])).rows;

@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { pathParts, validSourcePath, imageType } from '../src/lib/upload-validation.ts';
+import { destinationName, validSourcePath, imageType } from '../src/lib/upload-validation.ts';
 import { getBrandingStorage } from '../src/lib/branding-storage.ts';
 import { storeVerifiedImage } from '../src/lib/question-storage.ts';
 
-test('nested destinations normalize whitespace and reject unsafe or empty segments',()=>{
-  assert.deepEqual(pathParts(' Biology / Year 1 / Chapter 3 / The set '),['Biology','Year 1','Chapter 3','The set']);
-  for(const path of ['Set only','/Folder/Set','Folder//Set','Folder/../Set','Folder/./Set','Folder/Set/','Folder\\bad/Set',null]) assert.throws(()=>pathParts(path));
+test('folder and set names normalize whitespace without accepting paths',()=>{
+  assert.equal(destinationName(' Practice set '),'Practice set');
+  for(const name of ['', '  ', '/', 'Folder/Set', '..', '.', 'Folder\\Set', null, 'a'.repeat(101)])assert.throws(()=>destinationName(name));
 });
 test('folder-relative paths retain subfolders and disallow traversal',()=>{
   assert.equal(validSourcePath('Folder/Subfolder/Question10.png'),true);

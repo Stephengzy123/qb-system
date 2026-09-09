@@ -1,4 +1,4 @@
-export type BankFolder = { id: string; parent_folder_id: string | null; name: string; path: string };
+export type BankFolder = { id: string; parent_folder_id: string | null; name: string; path: string; can_upload: boolean };
 export type BankSet = { id: string; folder_id: string; name: string; path: string; status: string; count: number; answered: number; import_id: string | null };
 export type SetQuestion = {
   id: string;
