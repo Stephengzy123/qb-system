@@ -62,14 +62,14 @@ export default function Workspace({ view, user, organizationName, summary, child
       <div className="sidebar-bottom">
         <Link href="/student"><span className="nav-icon">◇</span>Student view</Link>
         <Link className={view === "audit" ? "active" : ""} href="/admin/audit-logs"><span className="nav-icon">⌁</span>Audit logs</Link>
-        <Link className={view === "account" ? "active" : ""} href="/admin/account"><span className="nav-icon">◎</span>Account</Link>
+        <Link className={`account-link ${view === "account" ? "active" : ""}`} href="/admin/account"><span className="nav-icon">◎</span><span>Account settings<small>Profile & appearance</small></span></Link>
         <Link href="/admin/settings"><span className="nav-icon">⚙</span>Settings</Link>
         <ThemeToggle label />
         <div className="profile"><span>{initials}</span><div><strong>{user.displayName}</strong><small>{user.role}</small></div><SignOutButton /></div>
       </div>
     </aside>
     <main className="main-content">
-      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><ThemeToggle /></div></div>
+      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><Link className="mobile-account-link" href="/admin/account" aria-label="Account settings">◎</Link><ThemeToggle /></div></div>
       {children ?? <>{view === "overview" && <Overview name={user.displayName} organizationName={organizationName} summary={summary ?? { questions: 0, assignments: 0, students: 0, needsAttention: 0 }} />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}
     </main>
   </AppearanceShell>;

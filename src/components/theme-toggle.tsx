@@ -1,42 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-
-const storageKey = "aoma-theme";
-
-function applyTheme(theme: "light" | "dark") {
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = theme;
-}
-
-function subscribe(onChange: () => void) {
-  const media = window.matchMedia("(prefers-color-scheme: dark)");
-  const syncSystemTheme = () => {
-    if (!localStorage.getItem(storageKey)) applyTheme(media.matches ? "dark" : "light");
-    onChange();
-  };
-  window.addEventListener("aoma-theme-change", onChange);
-  media.addEventListener("change", syncSystemTheme);
-  return () => {
-    window.removeEventListener("aoma-theme-change", onChange);
-    media.removeEventListener("change", syncSystemTheme);
-  };
-}
-
-function getTheme() {
-  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-}
+import { setTheme, useDusk, useTheme } from "@/lib/appearance";
 
 export default function ThemeToggle({ label = false }: { label?: boolean }) {
-  const theme = useSyncExternalStore(subscribe, getTheme, () => "light");
+  const theme = useTheme();
+  const dusk = useDusk();
   const dark = theme === "dark";
-
-  function toggleTheme() {
-    const next = dark ? "light" : "dark";
-    localStorage.setItem(storageKey, next);
-    applyTheme(next);
-    window.dispatchEvent(new Event("aoma-theme-change"));
-  }
-
-  return <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${dark ? "light" : "dark"} mode`} title={`Switch to ${dark ? "light" : "dark"} mode`}><span aria-hidden="true">{dark ? "☀" : "☾"}</span>{label && <b>{dark ? "Light mode" : "Dark mode"}</b>}</button>;
+  const title = dusk ? "Dusk uses dark mode. Choose Default in Appearance to change modes." : `Switch to ${dark ? "light" : "dark"} mode`;
+  return <button className="theme-toggle" type="button" disabled={dusk} onClick={() => setTheme(dark ? "light" : "dark")} aria-label={title} title={title}><span aria-hidden="true">{dark ? "☀" : "☾"}</span>{label && <b>{dusk ? "Dark mode · Dusk" : dark ? "Light mode" : "Dark mode"}</b>}</button>;
 }
