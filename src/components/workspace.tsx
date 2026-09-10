@@ -8,9 +8,9 @@ import ThemeToggle from "@/components/theme-toggle";
 import type { StaffSummary } from "@/lib/app-user";
 import BrandMark from "@/components/brand-mark";
 
-export type View = "overview" | "library" | "classes" | "assignments" | "audit" | "account" | "students";
+export type View = "overview" | "library" | "classes" | "assignments" | "audit" | "account" | "students" | "settings";
 
-const navItems: { id: Exclude<View, "audit" | "account">; label: string; icon: string; href: string }[] = [
+const navItems: { id: Exclude<View, "audit" | "account" | "settings">; label: string; icon: string; href: string }[] = [
   { id: "overview", label: "Overview", icon: "⌂", href: "/admin/dashboard" },
   { id: "library", label: "Question bank", icon: "▤", href: "/admin/question-bank" },
   { id: "classes", label: "Classes", icon: "◉", href: "/admin/classes" },
@@ -63,13 +63,13 @@ export default function Workspace({ view, user, organizationName, summary, child
         <Link href="/student"><span className="nav-icon">◇</span>Student view</Link>
         <Link className={view === "audit" ? "active" : ""} href="/admin/audit-logs"><span className="nav-icon">⌁</span>Audit logs</Link>
         <Link className={`account-link ${view === "account" ? "active" : ""}`} href="/admin/account"><span className="nav-icon">◎</span><span>Account settings<small>Profile & appearance</small></span></Link>
-        <Link href="/admin/settings"><span className="nav-icon">⚙</span>Settings</Link>
+        <Link className={view === "settings" ? "active" : ""} href="/admin/settings"><span className="nav-icon">⚙</span>Site settings</Link>
         <ThemeToggle label />
         <div className="profile"><span>{initials}</span><div><strong>{user.displayName}</strong><small>{user.role}</small></div><SignOutButton /></div>
       </div>
     </aside>
     <main className="main-content">
-      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><Link className="mobile-account-link" href="/admin/account" aria-label="Account settings">◎</Link><ThemeToggle /></div></div>
+      <div className="mobile-bar"><div className="brand"><BrandMark /><strong>{organizationName} Question Bank</strong></div><div className="mobile-actions"><nav aria-label="Mobile navigation">{navItems.map((item) => <Link key={item.id} href={item.href} aria-label={item.label} className={view === item.id ? "active" : ""}>{item.icon}</Link>)}</nav><Link className="mobile-account-link" href="/admin/account" aria-label="Account settings">◎</Link><Link className="mobile-account-link" href="/admin/settings" aria-label="Site settings">⚙</Link><ThemeToggle /></div></div>
       {children ?? <>{view === "overview" && <Overview name={user.displayName} organizationName={organizationName} summary={summary ?? { questions: 0, assignments: 0, students: 0, needsAttention: 0 }} />}{view === "library" && <Library />}{view === "classes" && <Classes />}{view === "assignments" && <Assignments />}</>}
     </main>
   </AppearanceShell>;

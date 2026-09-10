@@ -140,3 +140,5 @@ html[data-theme="dark"][data-appearance="dusk"] :is(.nav-badge,.appearance-accen
 .appearance-mode{display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding:22px 0}.appearance-mode h3{margin:0;font-size:14px}.appearance-mode p{margin-bottom:0}.appearance-mode .theme-toggle{width:auto;padding:0 14px}.theme-toggle:disabled{cursor:default;opacity:.65}
 .account-link small{display:block;font-size:10px;margin-top:3px;opacity:.7}.sidebar-bottom>a.account-link{min-height:58px}.mobile-account-link{padding:10px;font-size:20px;text-decoration:none}.student-account .account-link{gap:8px}
 @media(max-width:600px){.appearance-options{grid-template-columns:1fr}.appearance-panel{padding:18px}.appearance-mode{align-items:flex-start;flex-direction:column}.account-tabs{width:100%}.account-tabs a{flex:1;text-align:center;padding:10px}.student-header{height:auto;min-height:72px;padding-top:14px;padding-bottom:14px}}
+
+.settings-panel{margin-bottom:24px}

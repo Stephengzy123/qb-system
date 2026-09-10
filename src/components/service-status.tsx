@@ -41,7 +41,7 @@ export default function ServiceStatus({ organizationName, children }: { organiza
   }, []);
 
   return <>
-    <header className="page-header compact"><div><p className="eyebrow">DEPLOYMENT</p><h1>Settings</h1><p className="lede">Manage {organizationName} and check its connected services.</p></div><button className="secondary-button" onClick={refresh}>Refresh status</button></header>
+    <header className="page-header compact"><div><p className="eyebrow">DEPLOYMENT</p><h1>Site settings</h1><p className="lede">Manage {organizationName} branding and check its connected services.</p></div><button className="secondary-button" onClick={refresh}>Refresh status</button></header>
     {children}
     <section className="panel settings-panel">
       <div className="panel-heading"><div><h2>Service connections</h2><p>Credentials are read securely from the deployment environment.</p></div>{status && <span className="checked-time"><LocalTime value={status.checkedAt} format="time" prefix="Checked " /></span>}</div>
